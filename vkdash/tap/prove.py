@@ -101,12 +101,75 @@ def prove(inf=None, exts=None, config=None, outdir=''):
     proved = 0
     failed = 0
 
+    '''
+    # TODO condense the following two data structures into an assosciated array
+    configurations = []
+    config_name = []
+
+    if os.path.isfile('config.yml'):
+        with open('config.yml', 'r') as config:  # TODO standardize config location
+            logging.info("Loading configuration file.")
+
+            runtimes = []
+
+            lines = map(str.strip, config.readlines())
+            for line in lines:
+                if ':' not in line:  # NOTE obviously incomplete
+                    runtimes.append(line)
+                else:
+                    config_name.append(line[:len(line)-1])
+
+            platform = os.name
+
+            # NOTE - Preliminary support for anaconda python. 
+            # NOTE - Supporting 'bare' python installs over nt / posix systems is a nightmare ...
+            #        ... it is not great in anacoda, but it is much easier. This is tricky to design flexibly ...
+
+            # The way my C++ projects build are with a single shell or bash script. No Make, Ninja, or any other build tool.
+            # This is simple, portable, and understandable. All the information necessary to build is in 1 file.
+            # The way our configuration system currently works is to, in essense, gather the necessary information from the config file ...
+            # to build the build script. I think, in practice, we should support both approaches by general method. But that's for another day ...
+
+            # Many containerized approaches use a container (or network of containers) as a configuration (variations on has-a, is-a relationships) ...
+            # Testing configurations therefore just entails testing the containers.
+            # This forces the user to do all the upfront configuration monkey puzzle. In practice, this is even more complicated than it sounds ...
+            # because containers are not necessarily isomorphic with user systems due to state leak ... see below ...
+
+            # Anaconda's environments feels like a container ... but pre-installed python can be both 'leaky' and 'sticky' ...
+            # ... so I have developed a special fobia trying to confirm what environment we're really evaluating when we 'prove' a directory.
+
+            if config_name[0] == "conda":  # TODO obviously incomplete
+                platform_cmd = []
+
+                if platform == 'nt':
+                    platform_cmd = ["activate"]
+                
+                elif platform == 'posix':
+                    platform_cmd = ["source", "activate"]
+
+                else:
+                    logging.error(platform + " is an unsupported platform!")  # TODO raise exception?
+                    return
+
+                for runtime in runtimes:
+                    configurations.append([*platform_cmd, runtime])
+            else:
+                logging.error("Unsupported configuration!")
+
+    else:
+        logging.info("No configuration file detected")
+    '''
+
     #build_dir = _dir
     #if not _dir or not _ConfirmFolderAccessAndPermissions(_dir):
     #    return
     if config:
         config += ':'
     for fname in tree:  # 'file' shadows python's file object name.
+        '''
+         for configuration in configurations:
+            cmd = [*configuration, "; python ", file]  # NOTE 3.x list unpacking
+        '''
         cmd = ["python", fname]
         logging.info("")
         logging.info(" running cmd: %s" % ' '.join(cmd))

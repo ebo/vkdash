@@ -25,8 +25,11 @@ def is_tap(infile, ext=".tap"):
        but this is overwritable.
 
     """
+    import re
     _base, _ext = os.path.splitext(os.path.basename(infile))
-    if _ext != ext:
+    tparse = re.compile('^test_|^t_|_test$|_t$', re.IGNORECASE)
+    match = tparse.match(_base)
+    if not (match and _ext == ext):
         return False
     
     logging.info(" '%s' is a TAP file." % infile)

@@ -29,31 +29,10 @@ class Dashboard:
             outstr += footer
             return outstr
 
-        uc = []
-        ud = []
-        ut = []
         for p in self.plans:
-            f = os.path.basename(p.file_name)
-            c,d,t = f.split(':')
-            uc.append(c)
-            ud.append(d)
-            ut.append(t)
             totals = p.count(totals)
-        uc = list(set(uc))
-        ud = list(set(ud))
-        ut = list(set(ut))
 
-        unique_configs = len(uc)
-        unique_dates = len(ud)
-        unique_plans = len(ut)
-        print "configs:",unique_configs,uc
-        print "dates:",unique_dates,ud
-        print "plans:",unique_plans,ut
-
-        outstr += '<h2>' + "Number of configurations: " + str(unique_configs) + str(uc) + '</h2>\n'
-        outstr += '<h2>' + "Number of Unique Dates: " + str(unique_dates) + str(ud) + '</h2>\n'
-        outstr += '<h2>' + "Number of Unique Plans: " + str(unique_plans) + str(ut) + '</h2>\n'
-        outstr += '<h2>' + "Total Number of Plans: " + str(len(self.plans)) + '</h2>\n'
+        outstr += '<h2>' + "Number of Plans: " + str(len(self.plans)) + '</h2>\n'
         outstr += '<h2> Result&#160Totals: </h2>\n'
         outstr += '<div class="stat">\n'
 
@@ -78,9 +57,9 @@ class Dashboard:
             config = test_config.split(':')
             fname = config[-1]
             if len(config) >1:
-                config_name = config[0]
+                config_name = cinfig[0]
                 run_date = config[1]
-                config = ':'.join([config_name,run_date])
+                config = ':'.join(config_name,run_date)
             else:
                  config = ''
 
