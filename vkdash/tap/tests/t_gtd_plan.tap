@@ -1,0 +1,19 @@
+TAP version 13
+1..13
+ok 1 - the Plan tests should be empty.
+ok 2 - and should be 1 after the previous test...
+# a diagnosstic message.
+#   and another...
+#     and another...
+ok 3 - and another test after the diagnostic...
+ok 4 - make sure that the diagnostic messaging does not advance the test number
+ok 5 - verify that the boolean test for the plan is true when all tests pass
+ok 6 - verify that the boolean test for the plan is False after the first failed test
+ok 7 - parsed the plan's version string
+ok 8 - and the number of plan items are as expected
+ok 9 - test if we can parse from lists of strings
+ok 10 - test setting runtime
+  ---
+  data:
+      RUN_TIME: 1234.56
+  ...

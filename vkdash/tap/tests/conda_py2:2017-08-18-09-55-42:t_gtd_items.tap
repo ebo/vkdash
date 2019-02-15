@@ -1,0 +1,16 @@
+TAP version 13
+1..14
+ok 1 - Test 'ok' only properly parsed and converted back to a string.
+ok 2 - Test 'not ok' only properly parsed and converted back to a string.
+ok 3 - Test 'ok' with missing number and converted back to a string.
+ok 4 - Test 'not ok' with missing number and converted back to a string.
+ok 5 - Test 'ok' with missing '-' and converted back to a string.
+ok 6 - Test 'not ok' with missing '-' and converted back to a string.
+ok 7 - Test 'ok' with skip and converted back to a string.
+ok 8 - Test 'not ok' with todo and converted back to a string.
+ok 9 - Testing ' # diagnostic...' and converted back to a string.
+ok 10 - testing item type directly
+ok 11 - testing item type infered
+ok 12 - testing item camilcase type
+ok 13 - Testing skip directive + some comments.
+ok 14 - Testing comments in the directive filed.
