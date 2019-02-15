@@ -42,16 +42,19 @@ class Plan:
        single test run.
 
     """
+    #version = "TAP version 13"
+    #tests = []
+    #test_count = 0
+    #file_name = ''
 
-    def __init__(self, atexit=False,
-                 outname=os.path.splitext(sys.argv[0])[0]+".tap"):
+    def __init__(self, atexit=True):
         """Common constructor shared by all TAP Plans."""
         self.version = "TAP version 13"
         self.tests = deepcopy([])
         self.test_count = 0
+        self.file_name = os.path.splitext(sys.argv[0])[0]+".tap"
         self.saved = False
         self.atexit = atexit
-        self.file_name = outname
 
         if atexit:
             import atexit
@@ -64,26 +67,20 @@ class Plan:
         ok.itype = "diag"
         self.tests.append(ok)
         
-    def eq_ok(self, inpt, expect, description='', message='', skip=None,
-              todo=None, severity='', data=None, dump=None):
+    def eq_ok(self, input, expect, description='', message='', skip=None, todo=None,  # NOTE input is shadowing
+              severity='', data=None, dump=None):
         """Base function for evaluating a test and creating a reported TAP item."""
 
         # FIXME: remove the overwrite and deep copy issues if possible
         from copy import deepcopy
 
-        ok = Tap_Item()
-
         if data is None:
-            ok.data = {}
-        else:
-            ok.data = deepcopy(data)
-
+            data = {}
 
         if dump is None:
-            ok.dump = {}
-        else:
-            ok.dump = deepcopy(data)
+            dump = {}
 
+        ok = Tap_Item()
         self.test_count += 1
         ok.number = self.test_count
         ok.itype = "unknown"
@@ -104,16 +101,16 @@ class Plan:
         if todo is not None:
             ok.ok = False
             ok.directive = todo
-            ok.data['message'] = deepcopy(message)
-            ok.data['severity'] = deepcopy(severity)
+            ok.message = deepcopy(message)
+            ok.severity = deepcopy(severity)
             ok.itype = "todo"
             self.tests.append(ok)
             return
 
-        got = deepcopy(inpt)
+        got = deepcopy(input)
         expect = deepcopy(expect)
-        if callable(inpt):
-            got = deepcopy(inpt())
+        if callable(input):
+            got = deepcopy(input())
 
         if got == expect:
             ok.ok = True
@@ -122,17 +119,20 @@ class Plan:
             ok.ok = False
             ok.itype = "fail"
 
+        # now set the data (overwrite with user defined data if you have it)
+        ok.data = deepcopy(data)
+
         # if user specified they want the got and expect values
         # displayed, then overwrite the evaluated values.
-        if 'got' in ok.data or 'expect' in ok.data and ok.ok:
+        if 'got' in data or 'expect' in data and ok.ok:
             ok.data['got'] = got
             ok.data['expect'] = expect
 
         if not ok.ok:
             ok.ok = False
-            ok.data['message'] = deepcopy(message)
-            ok.data['severity'] = deepcopy(severity)
-            
+            ok.message = message
+            ok.severity = severity
+
             if not (type(got) is bool and type(expect) is bool):
                 ok.data['got'] = got
                 ok.data['expect'] = expect
@@ -142,10 +142,15 @@ class Plan:
 
         self.tests.append(ok)
 
-    def ok(self, inpt, description='', message='', skip=None,
-           todo=None, severity=None, data=None, dump=None):
+    def ok(self, input, description='', message='', skip=None, todo=None, severity=None, data=None, dump=None):  # input shadow
         """wrapper for the most common case of 'eq_ok' usage."""
-        self.eq_ok(inpt, True, description, message, skip, todo, severity, data, dump)
+        if data is None:
+            data = {}
+
+        if dump is None:
+            dump = {}
+
+        self.eq_ok(input, True, description, message, skip, todo, severity, data, dump)
 
     def __repr__(self):
         """Build a nice string representation of this plan"""
@@ -158,21 +163,22 @@ class Plan:
         return outstr
 
     def _atexit_save(self):
-        """if the _atexit_save method is registered, then the contents of the
-           plan are automatically saved when the plan goes out of
-           scope or the program terminates."""
+        #print "!!!! atexit"
         if not self.saved and self.atexit:
+            #print "  saving:",self.file_name
             self.write()
     
     def __enter__(self):
+        #print "!!!! enter"
         return self
     
     def __exit__(self):
+        #print "!!!! exit"
         pass
 
     def __del__(self):
+        #print "!!!! del"
         pass
-
     def write(self, fname=None):
         if fname is None:
             fname = self.file_name
@@ -199,15 +205,18 @@ class Plan:
         self.saved = True
 
         def _HandleUserData(item):
-            istr = str(item).split('\n')
+            istr = str(item)
 
-            if item.dump or item.data:
+            if item.dump or item.data or item.message or item.severity:
                 outstr = '\t\t<details>\n'
-                outstr += '\t\t<summary>' + istr[0] + '</summary>\n'  # TODO what should istr be
+                outstr += '\t\t<summary>' + istr + '</summary>\n'  # TODO what should istr be
 
-                # FIXME: need to clean up the html display of the YAML data
+                if item.message:
+                    outstr += "\t\t\t<p> message: %s</p>\n" % item.message
+                if item.severity:
+                    outstr += "\t\t\t<p> severity: %s</p>\n" % item.severity
                 if item.data:
-                    outstr += "\t\t\t\n"
+                    outstr += "\t\t\t<p> data:</p>\n"
                     for k,v in item.data.iteritems():
                         outstr += "    %s: %s\n" % (str(k), str(v))
                 if item.dump:
@@ -218,7 +227,7 @@ class Plan:
                             outstr += "\t\t\t<p>      - '%s'<\p>\n" % str(i)
                 outstr += '\t\t</details>\n'
             else:
-                outstr = '\t\t\t' + istr[0] + '\n'
+                outstr = '\t\t\t' + istr + '\n'
 
             return outstr
 
@@ -326,11 +335,8 @@ class Plan:
 
         return stats, overview_html, test_html, test_number
 
-    def __nonzero__(self): # FIXME: how do we define standard behaviour between py2 and py3
-        return self.__bool__()
-    
-    def __bool__(self):
-        """Boolean pass/fail test for this plan. py3?"""
+    def __nonzero__(self):
+        """Boolean pass/fail test for this plan."""
         for t in self.tests:
             if type(t.ok) is bool and not t.ok:
                 return False
@@ -386,7 +392,7 @@ class Plan:
             itm = Tap_Item(line)
             self.tests.append(itm)
             self.test_count += 1
-            i = j
+            i += 1
 
     def open(self, fname):
         """Open and parse a a TAP output file.
@@ -396,8 +402,7 @@ class Plan:
 
         self.file_name = fname
         try:
-            #lines = [l.strip() for l in open(fname,'r').readlines()]
-            lines = [l.replace('\n','') for l in open(fname,'r').readlines()]
+            lines = [l.strip() for l in open(fname,'r').readlines()]
         except:
             lines = []
 
@@ -407,15 +412,12 @@ class Plan:
             j = i + 1
             while j < llen:
                 spl = lines[j].strip().lower().split()
-                if ".." in spl[0]:
-                    j += 1
-                    break
-                if spl[0] in ["#", "tap", "ok", "not"]:
+                if spl[0] in ["#", "tap", "ok", "not"] or ".." in spl[0]:
                     break
                 j += 1
 
             self.parse(lines[i:j])
-            i = j
+            i += 1
 
     def count(self, values=None):
         """Return how many of the plan's tests passed, failed, todos, or were skiped."""

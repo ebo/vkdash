@@ -6,21 +6,19 @@ resultant TAP output for summary statistics.
 
 """
 
-# -----------------------------------------------------------------------------
+#-----------------------------------------------------------------------------
 # Public interface
-# -----------------------------------------------------------------------------
+#-----------------------------------------------------------------------------
 __all__ = ['prove', 'find_tests']
 
-# -----------------------------------------------------------------------------
+#-----------------------------------------------------------------------------
 # Imports
-# -----------------------------------------------------------------------------
+#-----------------------------------------------------------------------------
 import os
 import logging
 import shutil
 from vkdash.tap import *
-from collections import OrderedDict  # TODO unused import
-import datetime
-
+from collections import OrderedDict
 
 def _is_test(infile, exts=None):
     """internal function to test if a file is recognized as a test
@@ -39,7 +37,7 @@ def _is_test(infile, exts=None):
     if not (match and _ext in exts):
         return False
 
-    logging.info(" '%s' is a test." % infile)
+    logging.info(" '%s' is a test."%infile)
     return True
 
 
@@ -53,7 +51,7 @@ def find_tests(inf=".", exts=None):
         exts = [".py"]
 
     if not os.path.exists(inf):
-        logging.error(" (find_tests): input '%s' does not exist." % inf)
+        logging.error(" (find_tests): input '%s' does not exist."%inf)
         return []
     if os.path.isfile(inf):
         return [inf]
@@ -67,7 +65,7 @@ def find_tests(inf=".", exts=None):
         return tree
 
 
-def prove(inf=None, exts=None, config=None, outdir='', date=None):
+def prove(inf=None, exts=None, config=None, outdir=''):
     """find all files in the collection of files or directores which are
     recognized as test programs, run them, and then sumerize the
     results.
@@ -95,7 +93,7 @@ def prove(inf=None, exts=None, config=None, outdir='', date=None):
     tree = []
     for f in inf:
         if not os.path.exists(f):
-            logging.error(" (Prove): input '%s' does not exist." % f)
+            logging.error(" (Prove): input '%s' does not exist."%f)
             continue
 
         tree += find_tests(f, exts)
@@ -103,84 +101,40 @@ def prove(inf=None, exts=None, config=None, outdir='', date=None):
     proved = 0
     failed = 0
 
-    # TODO condense the following two data structures into an assosciated array?
-    configurations = []
-
+    #build_dir = _dir
+    #if not _dir or not _ConfirmFolderAccessAndPermissions(_dir):
+    #    return
     if config:
-        if os.path.isfile(config):
-            with open(config, 'r') as cfile:  # TODO config location?
-                logging.info("Loading configuration file.")
-
-                lines = map(str.strip, cfile.readlines())
-                for line in lines:
-                    if ':' not in line:  # NOTE obviously incomplete
-                        configurations.append(line)
-                    else:
-                        config = line[:len(line) - 1] 
-                        
-                platform = os.name
-
-                platform_cmd = ''
-
-                if platform == 'nt':
-                    platform_cmd = 'activate'
-                
-                elif platform == 'posix':
-                    platform_cmd = 'source activate'
-
-                else:
-                    logging.error(platform + " is an unsupported platform!")  # TODO raise exception?
-                    return
-
-                for i, configuration in enumerate(configurations):
-                    configurations[i] = platform_cmd + ' ' + configuration
-
+        config += ':'
+    for fname in tree:  # 'file' shadows python's file object name.
+        cmd = ["python", fname]
+        logging.info("")
+        logging.info(" running cmd: %s" % ' '.join(cmd))
+        status = subprocess.call(cmd)
+        if status != 0:
+            logging.error(" test '%s' returned a status of %s" % (fname, str(status)))
+            failed += 1
         else:
-            logging.info("No configuration file detected")
-    else:
-        configurations.append("")
+            proved += 1
 
-    for fname in tree:
-        for configuration in configurations:
-            if configuration:
-                cmd = configuration + ';' + "python " + fname
-            else:
-                cmd = "python " + fname
-                
-            logging.info("")
-            logging.info(" running cmd: %s" % cmd)
-
-            status = subprocess.call(cmd, shell=True)  # FIXME we have to ensure shell use is safe!
-            if status != 0:
-                logging.error(" test '%s' returned a status of %s" % (fname, str(status)))
   
             plan = Plan()  # plan is shadowing another 'plan' decl somewhere, somehow (as claims by pycharm)
 
-            tapname = os.path.splitext(fname)[0] + ".tap"
+            tapname = os.path.splitext(fname)[0]+".tap"
 
             # now move the output to the configuration name
-            p, f = os.path.split(tapname)
+            p,f = os.path.split(tapname)
             if outdir:
                 p = outdir
-
-            if not date:
-                date = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
-
-            if config:
-                new_tap = os.path.join(p, config + '_' + configuration.split()[-1] + ':' + date + ':' + f)
-            else:
-                new_tap = os.path.join(p, f)
-
+            new_tap = os.path.join(p,config+f)
             if os.path.exists(tapname):
-                # when we have configurations set, we need to name
-                # mangle the results
-                logging.info(" moving %s to %s" % (tapname, new_tap))
+                logging.info(" moving %s to %s"%(tapname,new_tap))
                 shutil.move(tapname, new_tap)
             
             plan.open(new_tap)
             
             counts = plan.count()
-            plans.append({"file": new_tap, "passed": counts['pass'], "failed": counts['fail'], "skipped": counts['skip'], "todos": counts['todo']})
+            plans.append({"file":new_tap,"passed":counts['pass'],"failed":counts['fail'],"skipped":counts['skip'],"todos":counts['todo']})
 
             total_tests += counts['pass'] + counts['fail'] + counts['todo'] + counts['skip']
             total_pass += counts['pass']
@@ -191,7 +145,6 @@ def prove(inf=None, exts=None, config=None, outdir='', date=None):
     # FIXME: this name should be the configuration name
     totals = {"name": config, "total_pass": total_pass,
               "total_fail": total_fail, "total_skip": total_skip, "total_todo": total_todo}
-
     return plans, totals
 
 
@@ -201,7 +154,7 @@ def main():
     """
 
     import argparse
-    import os, sys, logging  # TODO pep doesn't like multiple imports on the same line ... worth discussing?
+    import os, sys, logging
     parser = argparse.ArgumentParser(prog=os.path.basename(os.path.basename(sys.argv[0])))
     parser.add_argument("infiles", type=str, nargs='+',
                         help="input files or directorys")
@@ -219,7 +172,6 @@ def main():
                         help="produce diagnostic output [optional: default=%(default)s]")
     parser.add_argument("-d", "--debug", action="store_true", default=False, 
                         help="produce diagnostic output [optional: default=%(default)s]")
-
     args = parser.parse_args()
     if args.verbose is not False:
         logging.basicConfig(level=logging.INFO)
@@ -233,27 +185,35 @@ def main():
     logging.info(" inputs = '%s'" % args.infiles)
     logging.info(" ")
 
+    config_name = ''
     date = args.date
-    if args.config and not args.date:
-        date = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+    if args.config:
+        import datetime
 
-    results, totals = prove(args.infiles, config=args.config, date=date, outdir=args.outdir)
+        if not args.date:
+            date = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
+
+        config_name = "%s:%s"%(args.config,date)
+
+    results, totals = prove(args.infiles, config=config_name,outdir=args.outdir)
 
     print ("\nTest Summary Report")
-    if args.config:
-        print ("  for config: %s" % args.config)
+    if config_name:
+        print ("  for config: %s"%config_name)
         
     print ("===================")
 
     for r in results:
-        print ("%s | Passed: %d Failed: %d" % (r['file'], r['passed'], r['failed']))
+        print ("%s (Tests: %d Failed: %d" % (r['file'], r['passed'], r['failed'])),
         if r['todos']:
-            print (" ToDos: %d" % r['todos'])
+             print (" ToDos: %d"%r['todos']),
         if r['skipped']:
-            print (" ToDos: %d" % r['skipped'])
+             print (" ToDos: %d"%r['skipped']),
+        print (")")
 
+                
     print ("===================")
-    print ("Total Plans: %d  Passed: %d  Failed: %d" % (len(results), totals['total_pass'], totals['total_fail']))
+    print ("Total Plans: %d  Tests: %d  Failed: %d" % (len(results), totals['total_pass'], totals['total_fail']))
     if totals['total_fail'] == 0:
         print ("\nResult: Passed\n")
     else:

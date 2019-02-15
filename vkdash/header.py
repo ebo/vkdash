@@ -1,4 +1,4 @@
-header_lead = '<!DOCTYPE html>\n\
+header = '<!DOCTYPE html>\n\
 <html lang="en">\n\
 <head>\n\
 <meta charset="utf-8">\n\
@@ -45,9 +45,14 @@ align-self:stretch;\n\
     padding-top: 0.25vw;\n\
     padding-bottom: 0.25vw;\n\
     align-self: stretch;\n\
-}'
-
-header_end = '.info{display: grid;}\n\
+}\n\
+.skip{background-color: #38B9ED;}\n\
+.pass{background-color: #60E589;}\n\
+.fail{background-color: #FF5C5A;}\n\
+.todo{background-color: #FFF171;}\n\
+.diagnostic{background-color: #000000;}\n\
+.name{}\n\
+.info{display: grid;}\n\
 details[open] SUMMARY ~ * {animation: sweep .25s;}\n\
 @keyframes sweep {\n\
   0%    {opacity: 0; margin-top: -1px;}\n\

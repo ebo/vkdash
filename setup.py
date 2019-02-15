@@ -18,6 +18,7 @@ with open(ver_file) as f:
 
 PACKAGES = find_packages()
 
+
 opts = dict(name=NAME,
             maintainer=MAINTAINER,
             maintainer_email=MAINTAINER_EMAIL,
@@ -39,18 +40,18 @@ opts = dict(name=NAME,
             zip_safe=False
             )
 
-#try:
-#    from distutils.extension import Extension
-#    from Cython.Distutils import build_ext as build_pyx_ext
-#    from numpy import get_include
-#    # add Cython extensions to the setup options
-#    exts = [Extension('vkdash._utils', ['vkdash/_utils.pyx'],
-#                      include_dirs=[get_include()])]
-#    opts['cmdclass'] = dict(build_ext=build_pyx_ext)
-#    opts['ext_modules'] = exts
-#except ImportError:
-#    # no loop for you!
-#    pass
+try:
+    from distutils.extension import Extension
+    from Cython.Distutils import build_ext as build_pyx_ext
+    from numpy import get_include
+    # add Cython extensions to the setup options
+    exts = [Extension('vkdash._utils', ['vkdash/_utils.pyx'],
+                      include_dirs=[get_include()])]
+    opts['cmdclass'] = dict(build_ext=build_pyx_ext)
+    opts['ext_modules'] = exts
+except ImportError:
+    # no loop for you!
+    pass
 
 # Now call the actual setup function
 if __name__ == '__main__':

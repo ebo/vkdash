@@ -28,7 +28,7 @@ To build a HTML page from test results.
 vkdash.ConsumeTAPtoHTML(html_file_name, tap_test_results)
 ```
 
-To integrate all test results in the specified build directory into a HTML dashboard.  This function is not intended to be used regularly by a user.  Its purpose is to provide a holistic view of many repository's test results automatically by a server. 
+To integrate all test results in the specified build directory into a HTML dashboard.  This function is not intended to be used regularly by a user.  Its purpose is to provide a holistic view of many repository's test results automaticaly by a server. 
 ```python
 vkdash.BuildVKDashBoard(build_directory, results_directory)
 ```

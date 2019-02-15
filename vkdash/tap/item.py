@@ -16,14 +16,9 @@ __all__ = ['Tap_Item']
 
 import logging
 from collections import OrderedDict
-import yaml
 
 # FIXME: this could use to be cleaned up a little more...
 
-#import re
-#class DummyLoader(yaml.SafeLoader):
-#    pass
-#DummyLoader.add_implicit_resolver(u'!yeah',re.compile(ur'Yeah'),first='Y')
 
 class Tap_Item:
     # variables set in reset() function.
@@ -68,42 +63,68 @@ class Tap_Item:
 
         tap += directive
 
-        if self.dump or self.data:
+        if self.dump or self.data or self.message or self.severity:
             tap += "\n  ---\n"
-
-            stream = yaml.dump(self.data,  default_flow_style=False, indent=4)
-            stream = "  "+stream.replace('\n', '\n  ')
-            tap += stream
-
-            tap += "..."
+            if self.message:
+                tap += "  message: %s\n" % self.message
+            if self.severity:
+                tap += "  severity: %s\n" % self.severity
+            if self.data:
+                tap += "  data:\n"
+                for k, v in self.data.iteritems():
+                    tap += "    %s: %s\n" % (str(k), str(v))
+            if self.dump:
+                tap += "  dump:\n"
+                for k, v in self.dump.iteritems():
+                    tap += "    %s:\n" % str(k)
+                    for i in v:
+                        tap += "      - '%s'\n" % str(i)
+            tap += "  ..."
 
         return tap
 
     def is_diagnostic(self):
         """Return True if this item is a diagnostic comment."""
         return self.itype == "diag"
+        #if type(self.ok) is bool or self.directive or self.message or self.severity or self.data or self.dump:
+        #    return False
+        #return True
 
     def is_todo(self):
         """Return True if this item is a todo item."""
         return self.itype == "todo"
+        #if type(self.ok) is bool and self.ok is False and self.directive:
+        #    return True
+        #return False
 
     def is_skip(self):
         """Return True if this item is a skipped item."""
         return self.itype == "skip"
+        #if type(self.ok) is bool and self.ok is True and self.directive:
+        #    return True
+        #return False
 
     def passed(self):
         """Return True if this item is ok."""
         return self.itype == "pass"
+        #if type(self.ok) is bool and self.ok is True and not self.directive:
+        #    return True
+        #return False
 
     def failed(self):
         """Return True if this item is not ok."""
         return self.itype == "fail"
+        #if type(self.ok) is bool and self.ok is False and not self.directive:
+        #    return True
+        #return False
 
     def reset(self):
         """ Reset the items internal variables"""
         self.ok = ''
         self.description = ''
         self.directive = ''
+        self.message = ''
+        self.severity = ''
         self.number = -1
         self.data = OrderedDict()
         self.dump = OrderedDict()
@@ -142,7 +163,7 @@ class Tap_Item:
             line = lines[0]
         elif type(line) is list:
             lines = line
-            line = lines[0]
+            line - lines[0]
         else:
             logging.error(" (TAP_Item:parse) type '%s' not known." % str(type(line)))
             return
@@ -179,7 +200,7 @@ class Tap_Item:
             ppos = line.strip().index('#')
             self.description = line.strip()[:ppos].strip()
         except: # 'too broad an exception clause' warning
-            ppos = -1
+            ppos = None
             self.description = line.strip()
 
         # is there a directive?
@@ -205,10 +226,30 @@ class Tap_Item:
         if len(lines) == 1:
             return
 
-        # FIXME: might need to do something special to parse the dumps
+        # parse the data and the dumps
+        if lines[1].strip() !="" and lines[1].strip() != "---" and lines[-1].strip() != "...":
+            logging.error(" the extended TAP message is malformed with:")
+            for i in lines[1:]:
+                logging.error("     '%s'" % i)
+            logging.error("")
 
-        p = '\n'.join(lines[2:-1])
-        self.data = yaml.load(p)
+        i = 2
+        while i < len(lines[:-1]):
+            if "data" in lines[i].lower():
+                i = self._parse_data(i+1, lines)
+            elif "dump" in lines[i].lower():
+                i = self._parse_dump(i+1, lines)
+            elif "message" in lines[i].lower():
+                self.message = lines[i].strip().split(':')[1]
+            elif "severity" in lines[i].lower():
+                self.severity = lines[i].strip().split(':')[1]
+            else:
+                logging.error(" ")
+                while i < len(lines[:-1]):
+                    logging.error("     %s" % lines[i])
+                logging.error("")
+                return
+            i += 1
 
     def _parse_data(self, ln, lines):
         """ Helper function to subparse the data field."""
@@ -216,9 +257,15 @@ class Tap_Item:
         logging.info(" in parse_data:")
         while ln < length:
             spl = lines[ln].strip().split()
-            if spl[0] in ["...", "data:"]:
+            if spl[0] in ["...", "data:", "message:", "severity:"]:
                 return ln -1  # the caller will increment after
-                              # successful parse
+                             # successful parse
+            #if "..." == lines[ln].strip():
+            #    return ln -1 # the caller will increment after
+            #                 # successful parse
+            #if "dump:" in lines[ln].strip()[:6]:
+            #    return ln -1 # the caller will increment after
+            #                 # successful parse
                         
             k, v = lines[ln].strip().split(':')
             self.data[k] = v
@@ -234,12 +281,16 @@ class Tap_Item:
         logging.info(" in parse_data:")
         while ln < length:
             spl = lines[ln].strip().split()
-            if spl[0] in ["...", "data:"]:
+            if spl[0] in ["...", "data:", "message:", "severity:"]:
                 return ln - 1  # the caller will increment after
-                              # successful parse
+                             # successful parse
+            #if "data:" in lines[ln].strip()[:6]:
+            #    return ln -1 # the caller will increment after
+            #                 # successful parse
                         
             k, v = lines[ln].strip().split(':')
             self.dump[k] = []
+            # FIXME: test that value is empty here...
 
             ln += 1
             while ln < length:

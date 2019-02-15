@@ -22,4 +22,4 @@ have all of these things at their fingertips.
 
 __docformat__ = 'restructuredtext'
 
-from .version import __version__  # TODO unused export
+from .version import __version__

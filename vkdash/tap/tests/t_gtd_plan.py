@@ -5,7 +5,7 @@ plan = None
 try:
     plan = Plan()
 except:
-    print ("ERROR: creating a plan failed...")
+    print "ERROR: creating a plan failed..."
     exit(-1)
 
 plan.ok(0==len(plan.tests), "the Plan tests should be empty.")
@@ -37,9 +37,6 @@ parse2_plan = Plan()
 ver_str = "TAP version 12"
 parse2_plan.parse([ver_str,"1..1","ok"])
 plan.ok(1==parse2_plan.test_count, "test if we can parse from lists of strings")
-
-# add a time stamp
-plan.ok(True, "test setting runtime",message="this is a test",data={'data':{'RUN_TIME': 1234.56}})
 
 results = os.path.splitext(__file__)[0]+".tap"
 fout = open(results,'w')
