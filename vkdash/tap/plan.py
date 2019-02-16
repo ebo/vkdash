@@ -174,7 +174,7 @@ class Plan:
         if self.version:
             outstr = deepcopy(self.version)+'\n'
 
-        outstr += "1..%d"%(len(self.tests))
+        outstr += "1..%d"%(self.test_count)
         for t in self.tests:
             outstr += '\n'+str(t)
         return outstr
