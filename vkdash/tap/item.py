@@ -51,10 +51,10 @@ class Tap_Item:
             directive += self.directive
         elif self.is_skip():
             tap = "ok"
-            directive += "skip "+self.directive
+            directive += "SKIP "+self.directive
         elif self.is_todo():
             tap = "not ok"
-            directive += "todo "+self.directive
+            directive += "TODO "+self.directive
         else:
             logging.error(" internal error: type currently not supported.")
             raise()
