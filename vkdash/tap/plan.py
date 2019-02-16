@@ -44,7 +44,8 @@ class Plan:
     """
 
     def __init__(self, atexit=False,
-                 outname=os.path.splitext(sys.argv[0])[0]+".tap"):
+                 outname=os.path.splitext(sys.argv[0])[0]+".tap",
+                 verbose=False):
         """Common constructor shared by all TAP Plans."""
         self.version = "TAP version 13"
         self.tests = deepcopy([])
@@ -52,6 +53,7 @@ class Plan:
         self.saved = False
         self.atexit = atexit
         self.file_name = outname
+        self.verbose = verbose
 
         if atexit:
             import atexit
@@ -64,8 +66,8 @@ class Plan:
         ok.itype = "diag"
         self.tests.append(ok)
         
-    def eq_ok(self, inpt, expect, description='', message='', skip=None,
-              todo=None, severity='', data=None, dump=None):
+    def eq_ok(self, inpt, expect, description='', message=None, skip=None,
+              todo=None, severity=None, data=None, dump=None):
         """Base function for evaluating a test and creating a reported TAP item."""
 
         # FIXME: remove the overwrite and deep copy issues if possible
@@ -102,36 +104,56 @@ class Plan:
             return
 
         if todo is not None:
+            ok.itype = "todo"
             ok.ok = False
             ok.directive = todo
-            ok.data['message'] = deepcopy(message)
-            ok.data['severity'] = deepcopy(severity)
-            ok.itype = "todo"
+            if message:
+                ok.data['message'] = deepcopy(message)
+            # This assumes that it is reporint failure from the todo
+            # and not as a user defined severity
+            if self.verbose:
+                ok.data['severity'] = deepcopy("todo")
+
             self.tests.append(ok)
             return
 
-        got = deepcopy(inpt)
-        expect = deepcopy(expect)
-        if callable(inpt):
-            got = deepcopy(inpt())
+        if not skip and not todo:
+            got = deepcopy(inpt)
+            expect = deepcopy(expect)
+            if callable(inpt):
+                got = deepcopy(inpt())
 
-        if got == expect:
-            ok.ok = True
-            ok.itype = "pass"
+            if got == expect:
+                ok.ok = True
+                ok.itype = "pass"
+            else:
+                ok.ok = False
+                ok.itype = "fail"
+
+            if not severity and self.verbose:
+                severity = ok.itype
         else:
-            ok.ok = False
-            ok.itype = "fail"
+            got = None
+            expect = None
 
-        # if user specified they want the got and expect values
-        # displayed, then overwrite the evaluated values.
-        if 'got' in ok.data or 'expect' in ok.data and ok.ok:
+        # if user specified they want the got, expect, message or
+        # severity values displayed, then overwrite with the evaluated
+        # values.
+        if 'got' in ok.data or 'expect' in ok.data:
             ok.data['got'] = got
             ok.data['expect'] = expect
+        if 'severity' in ok.data:
+            ok.data['severity'] = deepcopy(severity)
+        if 'message' in ok.data:
+            if not message:
+                message = "None"
+            ok.data['message'] = deepcopy(message)
 
         if not ok.ok:
-            ok.ok = False
-            ok.data['message'] = deepcopy(message)
-            ok.data['severity'] = deepcopy(severity)
+            if message:
+                ok.data['message'] = deepcopy(message)
+            if severity or self.verbose:
+                ok.data['severity'] = deepcopy(severity)
             
             if not (type(got) is bool and type(expect) is bool):
                 ok.data['got'] = got
@@ -142,7 +164,7 @@ class Plan:
 
         self.tests.append(ok)
 
-    def ok(self, inpt, description='', message='', skip=None,
+    def ok(self, inpt, description='', message=None, skip=None,
            todo=None, severity=None, data=None, dump=None):
         """wrapper for the most common case of 'eq_ok' usage."""
         self.eq_ok(inpt, True, description, message, skip, todo, severity, data, dump)
