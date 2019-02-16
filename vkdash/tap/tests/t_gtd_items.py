@@ -45,6 +45,7 @@ plan.ok(orig_str==itm_str, "Test 'ok' with skip and converted back to a string."
 orig_str = "not ok 1 - testing # TODO something else"
 itm.parse(orig_str)
 itm_str = str(itm)
+#print(itm_str)
 plan.ok(orig_str==itm_str, "Test 'not ok' with todo and converted back to a string.")
 
 orig_str = "# this is a test..."
@@ -68,13 +69,30 @@ itm.parse(orig_str)
 itm_str = str(itm)
 plan.ok(orig_str==itm_str, "Testing comments in the directive filed.")
 
+plan.diagnostic("just some diag to test if I am adding the test number correctly....")
+
 orig_str = "ok 923 - test cased skip # Skip just to be sure"
 itm.parse(orig_str)
 plan.ok(itm.itype=="skip", "Testing case Skip directive + some comments.")
 
-orig_str = "ok 924 - test cased skip # ToDo just to be sure"
+orig_str = "not ok 924 - test cased skip # ToDo just to be sure"
 itm.parse(orig_str)
 plan.ok(itm.itype=="todo", "Testing case ToDo directive + some comments.")
+
+#orig_str = "not ok 924 - test cased skip # ToDo just to be sure"
+#itm.parse(orig_str)
+#print(itm.directive)
+#plan.ok(itm.itype=="todo", "Testing case ToDo directive + some comments.")
+
+# FIXME: need to find a way to grab the last item and parse it back.
+# these are some tests in progress for verbosity metadata.
+#plan.verbose = True
+#plan.ok(True==False, "test todo", todo="not yet", message="cannot do")
+
+#plan.ok(True==False, "test skip directives", skip="for now", message="cannot do")
+#plan.ok(True==False, "test basic directives")
+
+#plan.ok(True==True, "test basic directives", message="why am I doing this...", data=pdict)
 
 results = os.path.splitext(__file__)[0]+".tap"
 fout = open(results,'w')
