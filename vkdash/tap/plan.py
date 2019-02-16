@@ -59,13 +59,16 @@ class Plan:
             import atexit
             atexit.register(self._atexit_save)
 
-    def diagnostic(self, message):
+    def diagnostic(self, message, data=None):
         """Create an embedded diagnostic message in the plan."""
         ok = Tap_Item()
         ok.description = deepcopy(message)
         ok.itype = "diag"
         self.tests.append(ok)
-        
+
+        if data:
+            ok.data = deepcopy(data)
+
     def eq_ok(self, inpt, expect, description='', message=None, skip=None,
               todo=None, severity=None, data=None, dump=None):
         """Base function for evaluating a test and creating a reported TAP item."""

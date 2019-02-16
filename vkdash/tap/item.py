@@ -36,8 +36,6 @@ class Tap_Item:
 
     def __repr__(self):
         """Build a nice string representation of this test item"""
-        if self.is_diagnostic():
-            return "# " + self.description
 
         directive = ""
         if self.directive or self.is_skip() or self.is_todo():
@@ -55,6 +53,8 @@ class Tap_Item:
         elif self.is_todo():
             tap = "not ok"
             directive += "TODO "+self.directive
+        elif self.is_diagnostic():
+            tap = "# %s" % self.description
         else:
             logging.error(" internal error: type currently not supported.")
             raise()
@@ -63,7 +63,7 @@ class Tap_Item:
         if self.number > 0:
             tap += " %s" % str(self.number)
             
-        if self.description:
+        if self.description and not self.is_diagnostic():
             tap += " - %s" % self.description
 
         tap += directive
@@ -149,58 +149,57 @@ class Tap_Item:
 
         if line.strip().lower()[0] == '#':
             self.description = line.strip()[1:].strip()
-            return
+        else:
+            if line.strip().lower()[:2] == "ok":
+                line = line.strip()[2:].strip()
+                self.ok = True
+                self.itype = "pass"
+            elif line.strip().lower()[:6] == "not ok":
+                line = line.strip()[6:].strip()
+                self.ok = False
+                self.itype = "fail"
 
-        if line.strip().lower()[:2] == "ok":
-            line = line.strip()[2:].strip()
-            self.ok = True
-            self.itype = "pass"
-        elif line.strip().lower()[:6] == "not ok":
-            line = line.strip()[6:].strip()
-            self.ok = False
-            self.itype = "fail"
+            # check for empty -- isdigit pukes otherwise...
+            if not line:
+                return
 
-        # check for empty -- isdigit pukes otherwise...
-        if not line:
-            return
+            # parse optional test number
+            if line.strip()[0].isdigit():
+                spl = line.strip().split(' ')
+                self.number = int(spl[0])
+                line = line.strip()[len(spl[0]):]
 
-        # parse optional test number
-        if line.strip()[0].isdigit():
-            spl = line.strip().split(' ')
-            self.number = int(spl[0])
-            line = line.strip()[len(spl[0]):]
+            # remove optional dash
+            if line.strip()[0] == '-':
+                line = line.strip()[1:]
 
-        # remove optional dash
-        if line.strip()[0] == '-':
-            line = line.strip()[1:]
+            # find the length of the descriptions
+            try:
+                ppos = line.strip().index('#')
+                self.description = line.strip()[:ppos].strip()
+            except: # 'too broad an exception clause' warning
+                ppos = -1
+                self.description = line.strip()
 
-        # find the length of the descriptions
-        try:
-            ppos = line.strip().index('#')
-            self.description = line.strip()[:ppos].strip()
-        except: # 'too broad an exception clause' warning
-            ppos = -1
-            self.description = line.strip()
+            # is there a directive?
+            if ppos > -1:
+                line = line.strip()[ppos+1:]
+                spl = line.strip().split(' ')
+                if spl[0].lower() == "skip":
+                    # verify that the ok valuse is appropriate
+                    if not self.ok:
+                        logging.error(" TAP item should return 'ok' when it is skipped.")
+                    ppos = 4
+                    self.itype = "skip"
+                elif spl[0].lower() == "todo":
+                    if self.ok:
+                        logging.error(" TAP item should return 'ok' when it is a ToDo.")
+                    ppos = 4
+                    self.itype = "todo"
+                else:
+                    ppos = 0
 
-        # is there a directive?
-        if ppos > -1:
-            line = line.strip()[ppos+1:]
-            spl = line.strip().split(' ')
-            if spl[0].lower() == "skip":
-                # verify that the ok valuse is appropriate
-                if not self.ok:
-                    logging.error(" TAP item should return 'ok' when it is skipped.")
-                ppos = 4
-                self.itype = "skip"
-            elif spl[0].lower() == "todo":
-                if self.ok:
-                    logging.error(" TAP item should return 'ok' when it is a ToDo.")
-                ppos = 4
-                self.itype = "todo"
-            else:
-                ppos = 0
-
-            self.directive = line.strip()[ppos:].strip()
+                self.directive = line.strip()[ppos:].strip()
 
         if len(lines) == 1:
             return
