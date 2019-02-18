@@ -244,11 +244,11 @@ class Plan:
 
         ordered_tests += '<table style="width:100%">'
         ordered_tests += '<tr>'
-        ordered_tests += '<th>Pass</th>'
-        ordered_tests += '<th>Test #</th>'
-        ordered_tests += '<th>Description</th>'
-        ordered_tests += '<th>Directive</th>'
-        ordered_tests += '<th>Metadata</th>'
+        ordered_tests += '<th align="left">Pass</th>'
+        ordered_tests += '<th align="left">Test #</th>'
+        ordered_tests += '<th align="left">Description</th>'
+        ordered_tests += '<th align="left">Directive</th>'
+        ordered_tests += '<th align="left">Metadata</th>'
         ordered_tests += '</tr>'
 
         for i in self.tests:
