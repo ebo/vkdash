@@ -245,7 +245,7 @@ class Plan:
                 # FIXME: need to clean up the html display of the YAML data
                 if item.data:
                     outstr += "\t\t\t\n"
-                    for k,v in item.data.iteritems():
+                    for k,v in item.data.items():
                         outstr += "    %s: %s\n" % (str(k), str(v))
                 if item.dump:
                     outstr += "\t\t\t<p>  dump:</p>\n"
