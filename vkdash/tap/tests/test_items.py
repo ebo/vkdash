@@ -52,7 +52,7 @@ def test_items():
     orig_str = "# this is a test..."
     itm.parse(orig_str)
     itm_str = str(itm)
-    plan.ok(orig_str==itm_str, "Testing '# diagnostic...' and converted back to a string.")
+    plan.ok(orig_str==itm_str, "Testing diagnostic... and converted back to a string.")
 
     orig_str = "ok 1 - testing something"
     itm.parse(orig_str)
