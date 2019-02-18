@@ -11,6 +11,7 @@ import os, sys, logging
 from vkdash.tap import Tap_Item
 from copy import deepcopy
 from collections import OrderedDict
+import yaml
 
 #-----------------------------------------------------------------------------
 # Public interface
@@ -45,7 +46,7 @@ class Plan:
 
     def __init__(self, atexit=False,
                  outname=os.path.splitext(sys.argv[0])[0]+".tap",
-                 verbose=False):
+                 verbose=False, data=None):
         """Common constructor shared by all TAP Plans."""
         self.version = "TAP version 13"
         self.tests = deepcopy([])
@@ -54,6 +55,7 @@ class Plan:
         self.atexit = atexit
         self.file_name = outname
         self.verbose = verbose
+        self.data = deepcopy(data)
 
         if atexit:
             import atexit
@@ -178,6 +180,16 @@ class Plan:
             outstr = deepcopy(self.version)+'\n'
 
         outstr += "1..%d"%(self.test_count)
+        if self.data:
+            if self.data: # FIXME: self.dump or 
+                outstr += "\n  ---\n"
+
+                stream = yaml.dump(self.data,  default_flow_style=False, indent=4)
+                stream = "  "+stream.replace('\n', '\n  ')
+                outstr += stream
+
+                outstr += "..."
+
         for t in self.tests:
             outstr += '\n'+str(t)
         return outstr
@@ -385,6 +397,7 @@ class Plan:
                 return
 
         # find the test number range.
+        ### FIXME: might be at the end, or anywere else
         spl = lines[0].strip().lower().split("..")
         if spl[0].isdigit() and spl[1].isdigit():
             if int(spl[0]) != 1:
@@ -396,6 +409,21 @@ class Plan:
             lines = lines[1:]
             if 0 == len(lines):
                 return
+
+        # FIXME: rethink the overall processin because all items now
+        # can basically have a YAML data attachment AND the plan can
+        # be anyway.  So, generalizing a version is an item, a diag is
+        # an item, a plan is an item...  We just interpret the first
+        # couple as part of the plan metadata.
+        
+        # first check if there is some metadata
+        #try:
+        #print("===>",lines)
+        #tmp_itm = Tap_Item()
+        #ret = tmp_itm._parse_data(0, lines)
+        #print("===>",ret)
+        #except:
+        #    pass
 
         # now read in and process all the ok/not ok messages.
         i = 0

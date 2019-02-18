@@ -4,7 +4,8 @@ import os
 def test_plan():
     plan = None
     try:
-        plan = Plan()
+        meta = {"test":"of embedding YAML in the plan"}
+        plan = Plan(data=meta)
     except:
         print ("ERROR: creating a plan failed...")
         exit(-1)
@@ -44,6 +45,19 @@ def test_plan():
 
     # add a random YAML field to a diagnostic message
     plan.diagnostic("test diagnostic YAML", data={'data':{'Random': "bla..."}})
+    ################
+    if False:
+        newplan = Plan()
+        orig_str = "TAP version 13\
+1..1\
+  ---\
+  test: what??? of embedding YAML in the plan\
+  ...\
+ok 1 - the Plan tests should be empty.\
+"
+        newplan.parse(orig_str)
+        print("****",newplan.data)
+        plan.ok(newplan.data['test']=="of embedding YAML in the plan", "Testing embedded YAML in plan headder.")
 
     results = os.path.splitext(__file__)[0]+".tap"
     fout = open(results,'w')
