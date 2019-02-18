@@ -140,7 +140,17 @@ class Dashboard:
                 outstr += '<h2><div class="report skip"> Skip:' + str(totals["skip"]) + '</div></h2>\n'
             if totals["pass"]:  # passed:
                 outstr += '<h2><div class="report pass"> Pass:' + str(totals["pass"]) + '</div></h2>\n'
+                
             outstr += '</div>\n'
+            if p.data:
+                import yaml
+                outstr += '\t\t<details>\n'
+                outstr += '\t\t<summary> YAML </summary>\n'
+
+                stream = yaml.dump(p.data,  default_flow_style=False, indent=4)
+                stream = "  "+stream.replace('\n', '\n  ')
+                outstr += stream
+                outstr += '\t\t</details>\n'
 
             outstr += overview
             outstr += '<details><summary>\n'\

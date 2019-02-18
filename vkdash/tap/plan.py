@@ -72,7 +72,7 @@ class Plan:
             ok.data = deepcopy(data)
 
     def eq_ok(self, inpt, expect, description='', message=None, skip=None,
-              todo=None, severity=None, data=None, dump=None):
+              todo=None, severity=None, data=None):
         """Base function for evaluating a test and creating a reported TAP item."""
 
         # FIXME: remove the overwrite and deep copy issues if possible
@@ -84,12 +84,6 @@ class Plan:
             ok.data = {}
         else:
             ok.data = deepcopy(data)
-
-
-        if dump is None:
-            ok.dump = {}
-        else:
-            ok.dump = deepcopy(data)
 
         self.test_count += 1
         ok.number = self.test_count
@@ -165,15 +159,12 @@ class Plan:
                 ok.data['got'] = got
                 ok.data['expect'] = expect
 
-        if dump:
-            ok.dump = deepcopy(dump)
-
         self.tests.append(ok)
 
     def ok(self, inpt, description='', message=None, skip=None,
-           todo=None, severity=None, data=None, dump=None):
+           todo=None, severity=None, data=None):
         """wrapper for the most common case of 'eq_ok' usage."""
-        self.eq_ok(inpt, True, description, message, skip, todo, severity, data, dump)
+        self.eq_ok(inpt, True, description, message, skip, todo, severity, data)
 
     def __repr__(self):
         """Build a nice string representation of this plan"""
@@ -182,14 +173,13 @@ class Plan:
 
         outstr += "1..%d"%(self.test_count)
         if self.data:
-            if self.data: # FIXME: self.dump or 
-                outstr += "\n  ---\n"
+            outstr += "\n  ---\n"
 
-                stream = yaml.dump(self.data,  default_flow_style=False, indent=4)
-                stream = "  "+stream.replace('\n', '\n  ')
-                outstr += stream
+            stream = yaml.dump(self.data,  default_flow_style=False, indent=4)
+            stream = "  "+stream.replace('\n', '\n  ')
+            outstr += stream
 
-                outstr += "..."
+            outstr += "..."
 
         for t in self.tests:
             outstr += '\n'+str(t)
@@ -236,10 +226,24 @@ class Plan:
 
         self.saved = True
 
-        def _HandleUserData(item):
-            istr = str(item).split('\n')
+        def _HandleUserData(data):
+            if data:
+                outstr  = '\t\t<details>\n'
+                outstr += '\t\t<summary> YAML </summary>\n'
 
-            if item.dump or item.data:
+                stream = yaml.dump(data,  default_flow_style=False, indent=4)
+                stream = "  "+stream.replace('\n', '\n  ')
+                outstr += stream
+                outstr += '\t\t</details>\n'
+            else:
+                outstr = '\t\t\t\n'
+
+            return outstr
+            #istr = str(item).split('\n')
+
+            items = None
+
+            if item.data:
                 outstr = '\t\t<details>\n'
                 #outstr += '\t\t<summary>' + istr[0] + '</summary>\n'  # TODO what should istr be
                 outstr += '\t\t<summary> YAML </summary>\n'
@@ -249,12 +253,6 @@ class Plan:
                     outstr += "\t\t\t\n"
                     for k,v in item.data.items():
                         outstr += "    %s: %s\n" % (str(k), str(v))
-                #if item.dump:
-                #    outstr += "\t\t\t<p>  dump:</p>\n"
-                #    for k, v in item.dump.iteritems():
-                #        outstr += "\t\t\t<p>    %s:<\p>\n"%str(k)
-                #        for i in v:  # i shadowing
-                #            outstr += "\t\t\t<p>      - '%s'<\p>\n" % str(i)
                 outstr += '\t\t</details>\n'
             else:
                 outstr = '\t\t\t\n'
@@ -273,7 +271,6 @@ class Plan:
         ordered_tests += '</tr>'
 
         for i in self.tests:
-            print("****", str(i))
             test_number += 1
             if i.is_diagnostic():
                 #this_test = '<div class="test" id="' + str(test_number) + '">\n\t'
@@ -287,7 +284,7 @@ class Plan:
                 this_test += '<td></td>'
                 this_test += '<td>'+ str(i.description) +'</td>'
                 this_test += '<td>'+ i.directive +'</td>'
-                this_test += '<td>'+ _HandleUserData(i) +'</td>'
+                this_test += '<td>'+ _HandleUserData(i.data) +'</td>'
                 this_test += '</tr>'
 
                 ordered_tests += this_test
@@ -307,7 +304,7 @@ class Plan:
                 this_test += '<td>'+ str(i.number) +'</td>'
                 this_test += '<td>'+ i.description +'</td>'
                 this_test += '<td>'+ i.directive +'</td>'
-                this_test += '<td>'+ _HandleUserData(i) +'</td>'
+                this_test += '<td>'+ _HandleUserData(i.data) +'</td>'
                 this_test += '</tr>'
 
                 passed += 1
@@ -331,7 +328,7 @@ class Plan:
                 this_test += '<td>'+ i.number +'</td>'
                 this_test += '<td>'+ i.description +'</td>'
                 this_test += '<td>'+ i.directive +'</td>'
-                this_test += '<td>'+ _HandleUserData(i) +'</td>'
+                this_test += '<td>'+ _HandleUserData(i.data) +'</td>'
                 this_test += '</tr>'
 
                 failed += 1
@@ -356,7 +353,7 @@ class Plan:
                 this_test += '<td>'+ i.number +'</td>'
                 this_test += '<td>'+ i.description +'</td>'
                 this_test += '<td>'+ i.directive +'</td>'
-                this_test += '<td>'+ _HandleUserData(i) +'</td>'
+                this_test += '<td>'+ _HandleUserData(i.data) +'</td>'
                 this_test += '</tr>'
 
                 skipped += 1
@@ -381,7 +378,7 @@ class Plan:
                 this_test += '<td>'+ i.number +'</td>'
                 this_test += '<td>'+ i.description +'</td>'
                 this_test += '<td>'+ i.directive +'</td>'
-                this_test += '<td>'+ _HandleUserData(i) +'</td>'
+                this_test += '<td>'+ _HandleUserData(i.data) +'</td>'
                 this_test += '</tr>'
 
                 todos += 1
@@ -393,7 +390,7 @@ class Plan:
 
         ordered_tests += '</table>'
 
-        stats = ''
+        stats = 'BABABABBA'
         if passed or failed or todos or skipped:
             stats = '<div class="report"></div>\n<div class="stat">\n'
 
@@ -466,6 +463,7 @@ class Plan:
                 spl = itm.description.split()
                 logging.debug(" test range = '%s' .. '%s'"%(spl[0],spl[1]))
                 max_test = int(spl[1])
+                self.data = deepcopy(itm.data)
                 continue
             self.tests.append(itm)
 

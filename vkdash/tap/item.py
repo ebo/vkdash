@@ -63,7 +63,7 @@ class Tap_Item:
 
         tap += directive
 
-        if self.dump or self.data:
+        if self.data:
             tap += "\n  ---\n"
 
             stream = yaml.dump(self.data,  default_flow_style=False, indent=4)
@@ -113,7 +113,6 @@ class Tap_Item:
         self.directive = ''
         self.number = -1
         self.data = OrderedDict()
-        self.dump = OrderedDict()
         self.itype = ''
 
     def type(self,t=None):
@@ -225,7 +224,6 @@ class Tap_Item:
                     self.directive = line.strip()[ppos:].strip()
 
         if self.itype == "unknown":
-            print("//////////////",lines[0])
             logging.error(" there should be no undefined types at this point.")
 
         if len(lines) <= 1:
