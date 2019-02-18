@@ -11,6 +11,7 @@ import os, sys, logging
 from vkdash.tap import Tap_Item
 from copy import deepcopy
 from collections import OrderedDict
+import yaml
 
 #-----------------------------------------------------------------------------
 # Public interface
@@ -44,7 +45,8 @@ class Plan:
     """
 
     def __init__(self, atexit=False,
-                 outname=os.path.splitext(sys.argv[0])[0]+".tap"):
+                 outname=os.path.splitext(sys.argv[0])[0]+".tap",
+                 verbose=False, data=None):
         """Common constructor shared by all TAP Plans."""
         self.version = "TAP version 13"
         self.tests = deepcopy([])
@@ -52,20 +54,25 @@ class Plan:
         self.saved = False
         self.atexit = atexit
         self.file_name = outname
+        self.verbose = verbose
+        self.data = deepcopy(data)
 
         if atexit:
             import atexit
             atexit.register(self._atexit_save)
 
-    def diagnostic(self, message):
+    def diagnostic(self, message, data=None):
         """Create an embedded diagnostic message in the plan."""
         ok = Tap_Item()
         ok.description = deepcopy(message)
         ok.itype = "diag"
         self.tests.append(ok)
-        
-    def eq_ok(self, inpt, expect, description='', message='', skip=None,
-              todo=None, severity='', data=None, dump=None):
+
+        if data:
+            ok.data = deepcopy(data)
+
+    def eq_ok(self, inpt, expect, description='', message=None, skip=None,
+              todo=None, severity=None, data=None):
         """Base function for evaluating a test and creating a reported TAP item."""
 
         # FIXME: remove the overwrite and deep copy issues if possible
@@ -77,12 +84,6 @@ class Plan:
             ok.data = {}
         else:
             ok.data = deepcopy(data)
-
-
-        if dump is None:
-            ok.dump = {}
-        else:
-            ok.dump = deepcopy(data)
 
         self.test_count += 1
         ok.number = self.test_count
@@ -102,57 +103,84 @@ class Plan:
             return
 
         if todo is not None:
+            ok.itype = "todo"
             ok.ok = False
             ok.directive = todo
-            ok.data['message'] = deepcopy(message)
-            ok.data['severity'] = deepcopy(severity)
-            ok.itype = "todo"
+            if message:
+                ok.data['message'] = deepcopy(message)
+            # This assumes that it is reporint failure from the todo
+            # and not as a user defined severity.  This conforms to
+            # the documented example.
+            if self.verbose:
+                ok.data['severity'] = deepcopy("todo")
+
             self.tests.append(ok)
             return
 
-        got = deepcopy(inpt)
-        expect = deepcopy(expect)
-        if callable(inpt):
-            got = deepcopy(inpt())
+        if not skip and not todo:
+            got = deepcopy(inpt)
+            expect = deepcopy(expect)
+            if callable(inpt):
+                got = deepcopy(inpt())
 
-        if got == expect:
-            ok.ok = True
-            ok.itype = "pass"
+            if got == expect:
+                ok.ok = True
+                ok.itype = "pass"
+            else:
+                ok.ok = False
+                ok.itype = "fail"
+
+            if not severity and self.verbose:
+                severity = ok.itype
         else:
-            ok.ok = False
-            ok.itype = "fail"
+            got = None
+            expect = None
 
-        # if user specified they want the got and expect values
-        # displayed, then overwrite the evaluated values.
-        if 'got' in ok.data or 'expect' in ok.data and ok.ok:
+        # if user specified they want the got, expect, message or
+        # severity values displayed, then overwrite with the evaluated
+        # values.
+        if 'got' in ok.data or 'expect' in ok.data:
             ok.data['got'] = got
             ok.data['expect'] = expect
+        if 'severity' in ok.data:
+            ok.data['severity'] = deepcopy(severity)
+        if 'message' in ok.data:
+            if not message:
+                message = "None"
+            ok.data['message'] = deepcopy(message)
 
         if not ok.ok:
-            ok.ok = False
-            ok.data['message'] = deepcopy(message)
-            ok.data['severity'] = deepcopy(severity)
+            if message:
+                ok.data['message'] = deepcopy(message)
+            if severity or self.verbose:
+                ok.data['severity'] = deepcopy(severity)
             
             if not (type(got) is bool and type(expect) is bool):
                 ok.data['got'] = got
                 ok.data['expect'] = expect
 
-        if dump:
-            ok.dump = deepcopy(dump)
-
         self.tests.append(ok)
 
-    def ok(self, inpt, description='', message='', skip=None,
-           todo=None, severity=None, data=None, dump=None):
+    def ok(self, inpt, description='', message=None, skip=None,
+           todo=None, severity=None, data=None):
         """wrapper for the most common case of 'eq_ok' usage."""
-        self.eq_ok(inpt, True, description, message, skip, todo, severity, data, dump)
+        self.eq_ok(inpt, True, description, message, skip, todo, severity, data)
 
     def __repr__(self):
         """Build a nice string representation of this plan"""
         if self.version:
             outstr = deepcopy(self.version)+'\n'
 
-        outstr += "1..%d"%(len(self.tests))
+        outstr += "1..%d"%(self.test_count)
+        if self.data:
+            outstr += "\n  ---\n"
+
+            stream = yaml.dump(self.data,  default_flow_style=False, indent=4)
+            stream = "  "+stream.replace('\n', '\n  ')
+            outstr += stream
+
+            outstr += "..."
+
         for t in self.tests:
             outstr += '\n'+str(t)
         return outstr
@@ -198,52 +226,53 @@ class Plan:
 
         self.saved = True
 
-        def _HandleUserData(item):
-            istr = str(item).split('\n')
+        def _HandleUserData(data):
+            if data:
+                outstr  = '\t\t<details>\n'
+                outstr += '\t\t<summary> YAML </summary>\n'
 
-            if item.dump or item.data:
-                outstr = '\t\t<details>\n'
-                outstr += '\t\t<summary>' + istr[0] + '</summary>\n'  # TODO what should istr be
-
-                # FIXME: need to clean up the html display of the YAML data
-                if item.data:
-                    outstr += "\t\t\t\n"
-                    for k,v in item.data.iteritems():
-                        outstr += "    %s: %s\n" % (str(k), str(v))
-                if item.dump:
-                    outstr += "\t\t\t<p>  dump:</p>\n"
-                    for k, v in item.dump.iteritems():
-                        outstr += "\t\t\t<p>    %s:<\p>\n"%str(k)
-                        for i in v:  # i shadowing
-                            outstr += "\t\t\t<p>      - '%s'<\p>\n" % str(i)
+                stream = yaml.dump(data,  default_flow_style=False, indent=4)
+                stream = "  "+stream.replace('\n', '\n  ')
+                outstr += stream
                 outstr += '\t\t</details>\n'
             else:
-                outstr = '\t\t\t' + istr[0] + '\n'
+                outstr = '\t\t\t\n'
 
             return outstr
 
         ordered_tests = ""
+
+        ordered_tests += '<table style="width:100%">'
+        ordered_tests += '<tr>'
+        ordered_tests += '<th>Pass</th>'
+        ordered_tests += '<th>Test #</th>'
+        ordered_tests += '<th>Description</th>'
+        ordered_tests += '<th>Directive</th>'
+        ordered_tests += '<th>Metadata</th>'
+        ordered_tests += '</tr>'
+
         for i in self.tests:
             test_number += 1
             if i.is_diagnostic():
-                this_test = '<div class="test" id="' + str(test_number) + '">\n\t'
-                this_test += '<div class="result diagnostic"></div>\n'
-                this_test += '\t<div class="result name"> ' + _HandleUserData(i) + '</div>\n'
-                this_test += '\t<div class="result info">'
-                this_test += '\t</div>\n</div>\n'
-                
+                this_test  = '<tr>'
+                this_test += '<td></td>'
+                this_test += '<td></td>'
+                this_test += '<td>'+ str(i.description) +'</td>'
+                this_test += '<td>'+ i.directive +'</td>'
+                this_test += '<td>'+ _HandleUserData(i.data) +'</td>'
+                this_test += '</tr>'
+
                 ordered_tests += this_test
 
             elif i.passed():
-                this_test = '<div class="test" id="' + str(test_number) + '">\n\t'
-                this_test += '<div class="result pass"></div>\n'
-                this_test += '\t<div class="result name">' + i.description + '</div>\n'
-                this_test += '\t<div class="result info">'
+                this_test  = '<tr>'
+                this_test += '<td> ok </td>'
+                this_test += '<td>'+ str(i.number) +'</td>'
+                this_test += '<td>'+ i.description +'</td>'
+                this_test += '<td>'+ i.directive +'</td>'
+                this_test += '<td>'+ _HandleUserData(i.data) +'</td>'
+                this_test += '</tr>'
 
-                tests = _HandleUserData(i)
-                
-                this_test += tests + '\t</div>\n</div>\n'
-                
                 passed += 1
 
                 ordered_tests += this_test
@@ -251,15 +280,14 @@ class Plan:
                 overview_passed += '<a href="#' + str(test_number) + '"><div class="view pass"' + ' ' + 'title="' \
                                    + i.description + '"></div></a>\n\t'
             elif i.failed():
-                this_test = '<div class="test" id="' + str(test_number) + '">\n\t'
-                this_test += '<div class="result fail"></div>\n'
-                this_test += '\t<div class="result name">' + i.description + '</div>\n'
-                this_test += '\t<div class="result info">'
+                this_test  = '<tr>'
+                this_test += '<td> not ok </td>'
+                this_test += '<td>'+ i.number +'</td>'
+                this_test += '<td>'+ i.description +'</td>'
+                this_test += '<td>'+ i.directive +'</td>'
+                this_test += '<td>'+ _HandleUserData(i.data) +'</td>'
+                this_test += '</tr>'
 
-                tests = _HandleUserData(i)
-                
-                this_test += tests + '\t</div>\n</div>\n'
-                
                 failed += 1
 
                 ordered_tests += this_test
@@ -267,15 +295,13 @@ class Plan:
                 overview_failed += '<a href="#' + str(test_number) + '"><div class="view fail"' + ' ' + 'title="' \
                                    + i.description + '"></div></a>\n\t'
             elif i.is_skip():
-                this_test = '<div class="test" id="' + str(test_number) + '">\n\t'
-                this_test += '<div class="result skip"></div>\n'
-                this_test += '\t<div class="result name">' + i.description 
-                this_test += ' ...' + i.directive + '</div>\n'
-                this_test += '\t<div class="result info">'
-                
-                tests = _HandleUserData(i)
-                
-                this_test += tests + '\t</div>\n</div>\n'
+                this_test  = '<tr>'
+                this_test += '<td> ok </td>'
+                this_test += '<td>'+ i.number +'</td>'
+                this_test += '<td>'+ i.description +'</td>'
+                this_test += '<td>'+ i.directive +'</td>'
+                this_test += '<td>'+ _HandleUserData(i.data) +'</td>'
+                this_test += '</tr>'
 
                 skipped += 1
                 
@@ -284,15 +310,13 @@ class Plan:
                 overview_skipped += '<a href="#' + str(test_number) + '"><div class="view skip"' + ' ' + 'title="' \
                                     + i.description + '"></div></a>\n\t'
             elif i.is_todo():
-                this_test = '<div class="test" id="' + str(test_number) + '">\n\t'
-                this_test += '<div class="result todo"></div>\n'
-                this_test += '\t<div class="result name">' + i.description 
-                this_test += ' ...' + i.directive + '</div>\n'
-                this_test += '\t<div class="result info">'
-                
-                tests = _HandleUserData(i)
-                
-                this_test += tests + '\t</div>\n</div>\n'
+                this_test  = '<tr>'
+                this_test += '<td> not ok </td>'
+                this_test += '<td>'+ i.number +'</td>'
+                this_test += '<td>'+ i.description +'</td>'
+                this_test += '<td>'+ i.directive +'</td>'
+                this_test += '<td>'+ _HandleUserData(i.data) +'</td>'
+                this_test += '</tr>'
 
                 todos += 1
 
@@ -300,6 +324,8 @@ class Plan:
 
                 overview_todo += '<a href="#' + str(test_number) + '"><div class="view todo"' + ' ' + 'title="' \
                                  + i.description + '"></div></a>\n\t'
+
+        ordered_tests += '</table>'
 
         stats = ''
         if passed or failed or todos or skipped:
@@ -339,10 +365,13 @@ class Plan:
     def parse(self, lines):
         """Parse either a collection of TAP items as either a list of strings,
         or a single string made up of carrage return seperated test
-        items.
+        items.  This version of the code considers the version string
+        and plan specification to be an item in itself -- which can
+        both include YAML metadata
 
         """
-        # remember the TAP version number
+
+        # convert the input to a list of strings if necessary
         if type(lines) is str:
             lines = lines.split('\n')
         elif type(lines) is list:
@@ -351,42 +380,36 @@ class Plan:
             logging.error(" (TAP_Plan:parse) type '%s' not known." % str(type(lines)))
             return
 
-        # remove the version number if available
-        spl = lines[0].strip().lower().split()
-        if spl[0] == "tap" and spl[1] == "version":
-            self.version = deepcopy(lines[0].strip())
-            lines = lines[1:]
-            if 0 == len(lines):
-                return
+        max_test = None
+        while lines:
+            # process each line (including metadata).  The nre tap
+            # parser only strips off the lines it needs and returns
+            # the rest of the input, and an empty list when done.
+            itm = Tap_Item()
+            lines = itm.parse(lines)
 
-        # find the test number range.
-        spl = lines[0].strip().lower().split("..")
-        if spl[0].isdigit() and spl[1].isdigit():
-            if int(spl[0]) != 1:
-                logging.error(" range does not start with '1' !")
-            # FIXME: should we test if the number of expected actually
-            # matches?
-            max_test = int(spl[1])
-            logging.debug(" test range = '%s' .. '%s'"%(spl[0],spl[1]))
-            lines = lines[1:]
-            if 0 == len(lines):
-                return
-
-        # now read in and process all the ok/not ok messages.
-        i = 0
-        llen = len(lines)
-        while i < llen:
-            j = i +1
-            while j < llen:
-                if lines[j].strip()[:2] == "ok" or lines[j].strip()[:6] == "not ok" or lines[j].strip()[0] == "#":
-                    break
-                j += 1
-            line = '\n'.join(lines[i:j])
-
-            itm = Tap_Item(line)
+            if itm.itype in ["pass","fail","skip","todo"]:
+                self.test_count += 1
+                if itm.number <= 0:
+                    self.test_count
+            elif itm.itype == "version":
+                self.version = itm.description
+                del itm
+                continue
+            elif itm.itype == "plan":
+                spl = itm.description.split()
+                logging.debug(" test range = '%s' .. '%s'"%(spl[0],spl[1]))
+                max_test = int(spl[1])
+                self.data = deepcopy(itm.data)
+                continue
             self.tests.append(itm)
-            self.test_count += 1
-            i = j
+
+        # FIXME: test that the tests are in range
+        if max_test:
+            if max_test != self.test_count:
+                logging.debug(" The max test number (%d) and test count (%d) are not equal"%(max_test,self.test_count))
+        else:
+            logging.warn(" Malformed Plan -- the plan was apparently never defined.")
 
     def open(self, fname):
         """Open and parse a a TAP output file.
@@ -401,21 +424,7 @@ class Plan:
         except:
             lines = []
 
-        i = 0
-        llen = len(lines)
-        while i < llen:
-            j = i + 1
-            while j < llen:
-                spl = lines[j].strip().lower().split()
-                if ".." in spl[0]:
-                    j += 1
-                    break
-                if spl[0] in ["#", "tap", "ok", "not"]:
-                    break
-                j += 1
-
-            self.parse(lines[i:j])
-            i = j
+        self.parse(lines)
 
     def count(self, values=None):
         """Return how many of the plan's tests passed, failed, todos, or were skiped."""
@@ -437,7 +446,11 @@ class Plan:
             elif t.is_skip(): values["skip"] += 1
             elif t.is_todo(): values["todo"] += 1
             elif t.failed(): values["fail"] += 1
-            elif t.is_diagnostic(): continue
-            else: logging.error("Invalid code path")
+            elif t.is_unknown():
+                logging.error("Invalid code path *****")
+            else:
+                pass # ignore the diagnostics, plan and version strings.
+
+            continue
 
         return values

@@ -1,0 +1,6 @@
+*.pyc
+vkdash.egg-info/*
+*~
+*.html
+*.tap
+.DS_Store

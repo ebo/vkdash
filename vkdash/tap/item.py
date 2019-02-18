@@ -20,14 +20,7 @@ import yaml
 
 # FIXME: this could use to be cleaned up a little more...
 
-#import re
-#class DummyLoader(yaml.SafeLoader):
-#    pass
-#DummyLoader.add_implicit_resolver(u'!yeah',re.compile(ur'Yeah'),first='Y')
-
 class Tap_Item:
-    # variables set in reset() function.
-    
     def __init__(self, str=None): #str shadowing python's str
         """Common constructor shared by all TAP items."""
         self.reset()
@@ -36,8 +29,6 @@ class Tap_Item:
 
     def __repr__(self):
         """Build a nice string representation of this test item"""
-        if self.is_diagnostic():
-            return "# " + self.description
 
         directive = ""
         if self.directive or self.is_skip() or self.is_todo():
@@ -51,10 +42,14 @@ class Tap_Item:
             directive += self.directive
         elif self.is_skip():
             tap = "ok"
-            directive += "skip "+self.directive
+            directive += "SKIP "+self.directive
         elif self.is_todo():
             tap = "not ok"
-            directive += "todo "+self.directive
+            directive += "TODO "+self.directive
+        elif self.is_diagnostic():
+            tap = "# %s" % self.description
+        elif self.is_empty():
+            tap = ""
         else:
             logging.error(" internal error: type currently not supported.")
             raise()
@@ -63,12 +58,12 @@ class Tap_Item:
         if self.number > 0:
             tap += " %s" % str(self.number)
             
-        if self.description:
+        if self.description and not self.is_diagnostic():
             tap += " - %s" % self.description
 
         tap += directive
 
-        if self.dump or self.data:
+        if self.data:
             tap += "\n  ---\n"
 
             stream = yaml.dump(self.data,  default_flow_style=False, indent=4)
@@ -79,9 +74,21 @@ class Tap_Item:
 
         return tap
 
+    def is_version(self):
+        """Return True of this is the version string."""
+        return self.itype == "version"
+
     def is_diagnostic(self):
         """Return True if this item is a diagnostic comment."""
         return self.itype == "diag"
+
+    def is_empty(self):
+        """Return True if this item is an ampty string."""
+        return self.itype == "empty"
+
+    def is_unknown(self):
+        """Return True if this item is of unknown type."""
+        return self.itype == "unknown"
 
     def is_todo(self):
         """Return True if this item is a todo item."""
@@ -106,7 +113,6 @@ class Tap_Item:
         self.directive = ''
         self.number = -1
         self.data = OrderedDict()
-        self.dump = OrderedDict()
         self.itype = ''
 
     def type(self,t=None):
@@ -132,122 +138,115 @@ class Tap_Item:
 
         self.reset()
 
-        # assume that this is a diagnostic message unless it is parsed
-        # to be something else.
-        self.itype = "diag"
+        self.itype = "unknown"  # FIXME: make it unknown...
 
         # now parst the string
         if type(line) is str:
             lines = line.split('\n')
-            line = lines[0]
         elif type(line) is list:
             lines = line
-            line = lines[0]
         else:
             logging.error(" (TAP_Item:parse) type '%s' not known." % str(type(line)))
-            return
+            return []
+        line = lines[0]
 
-        if line.strip().lower()[0] == '#':
-            self.description = line.strip()[1:].strip()
-            return
-
-        if line.strip().lower()[:2] == "ok":
-            line = line.strip()[2:].strip()
-            self.ok = True
-            self.itype = "pass"
-        elif line.strip().lower()[:6] == "not ok":
-            line = line.strip()[6:].strip()
-            self.ok = False
-            self.itype = "fail"
-
-        # check for empty -- isdigit pukes otherwise...
+        # handle empty strings
         if not line:
-            return
-
-        # parse optional test number
-        if line.strip()[0].isdigit():
-            spl = line.strip().split(' ')
-            self.number = int(spl[0])
-            line = line.strip()[len(spl[0]):]
-
-        # remove optional dash
-        if line.strip()[0] == '-':
-            line = line.strip()[1:]
-
-        # find the length of the descriptions
-        try:
-            ppos = line.strip().index('#')
-            self.description = line.strip()[:ppos].strip()
-        except: # 'too broad an exception clause' warning
-            ppos = -1
-            self.description = line.strip()
-
-        # is there a directive?
-        if ppos > -1:
-            line = line.strip()[ppos+1:]
-            spl = line.strip().split(' ')
-            if spl[0].lower() == "skip":
-                # verify that the ok valuse is appropriate
-                if not self.ok:
-                    logging.error(" TAP item should return 'ok' when it is skipped.")
-                ppos = 4
-                self.itype = "skip"
-            elif spl[0].lower() == "todo":
-                if self.ok:
-                    logging.error(" TAP item should return 'ok' when it is a ToDo.")
-                ppos = 4
-                self.itype = "todo"
+            self.itype = "empty"
+            if len(lines) > 0:
+                # this line is empty, but the next is not
+                return lines[1:]
             else:
-                ppos = 0
+                return []
 
-            self.directive = line.strip()[ppos:].strip()
+        # now parse the items
+        if line.strip()[0] == '#':
+            self.itype = "diag"
+            self.description = line.strip()[1:].strip()
+        elif line.strip().lower()[:3] == 'tap':
+            self.itype = "version"
+            self.description = line.strip().strip()
+            logging.debug(" version string = '%s'"%self.description)
+        elif line.strip()[:3] == '1..':
+            self.itype = "plan"
+            spl = line.strip().lower().split("..")
+            self.description = "%s %s"%(spl[0],spl[1])
+            logging.debug(" plan = '%s'"%self.description)
+        else:
+            if line.strip().lower()[:2] == "ok":
+                line = line.strip()[2:].strip()
+                self.ok = True
+                self.itype = "pass"
+            elif line.strip().lower()[:6] == "not ok":
+                line = line.strip()[6:].strip()
+                self.ok = False
+                self.itype = "fail"
 
-        if len(lines) == 1:
-            return
+            # check if the rest of the line is empty -- isdigit pukes
+            # otherwise...
+            if line:
+                # parse optional test number
+                if line.strip()[0].isdigit():
+                    spl = line.strip().split(' ')
+                    self.number = int(spl[0])
+                    line = line.strip()[len(spl[0]):]
 
-        # FIXME: might need to do something special to parse the dumps
+                # remove optional dash
+                if line.strip()[0] == '-':
+                    line = line.strip()[1:]
 
-        p = '\n'.join(lines[2:-1])
-        self.data = yaml.load(p)
+                # find the length of the descriptions
+                try:
+                    ppos = line.strip().index('#')
+                    self.description = line.strip()[:ppos].strip()
+                except: # 'too broad an exception clause' warning
+                    ppos = -1
+                    self.description = line.strip()
 
-    def _parse_data(self, ln, lines):
-        """ Helper function to subparse the data field."""
-        length = len(lines)
-        logging.info(" in parse_data:")
-        while ln < length:
-            spl = lines[ln].strip().split()
-            if spl[0] in ["...", "data:"]:
-                return ln -1  # the caller will increment after
-                              # successful parse
-                        
-            k, v = lines[ln].strip().split(':')
-            self.data[k] = v
-            logging.info("     key = %s  value = %s" % (k, v))
+                # is there a directive?
+                if ppos > -1:
+                    line = line.strip()[ppos+1:]
+                    spl = line.strip().split(' ')
+                    if spl[0].lower() == "skip":
+                        # verify that the ok valuse is appropriate
+                        if not self.ok:
+                            logging.error(" TAP item should return 'ok' when it is skipped.")
+                        ppos = 4
+                        self.itype = "skip"
+                    elif spl[0].lower() == "todo":
+                        if self.ok:
+                            logging.error(" TAP item should return 'ok' when it is a ToDo.")
+                        ppos = 4
+                        self.itype = "todo"
+                    else:
+                        ppos = 0
 
-            ln += 1
-        logging.info("")  # NOTE used to be logging.error, but it's unclear why since it seems to serve as just a nl
-        return ln
+                    self.directive = line.strip()[ppos:].strip()
 
-    def _parse_dump(self, ln, lines):
-        """ Helper function to subparse the dump field."""
-        length = len(lines)
-        logging.info(" in parse_data:")
-        while ln < length:
-            spl = lines[ln].strip().split()
-            if spl[0] in ["...", "data:"]:
-                return ln - 1  # the caller will increment after
-                              # successful parse
-                        
-            k, v = lines[ln].strip().split(':')
-            self.dump[k] = []
+        if self.itype == "unknown":
+            logging.error(" there should be no undefined types at this point.")
 
-            ln += 1
-            while ln < length:
-                if '-' != lines[ln].strip()[0]:
+        if len(lines) <= 1:
+            return []
+
+        yaml_head = None
+        yaml_tail = None
+        if lines[1].strip() == '---':
+            yaml_head = 2
+            # this is a YAML message.  Find the end string and parse
+            # it.  Also return the index of the next item.
+            for i in range(2,len(lines)):
+                if lines[i].strip() == '...':
+                    yaml_tail = i
                     break
-                dump_itm = lines[ln].strip()[1:].strip()
-                self.dump[k].append(dump_itm)
-                ln += 1
 
-        logging.info("")  # NOTE used to be logging.error, but it's unclear why since it seems to serve as just a nl
-        return ln
+        # sanity check
+        if bool(yaml_head) != bool(yaml_tail):
+            logging.error(" Malformed YAML expression at or near: \n%s"%'\n'.join(lines))
+            return []
+
+        if yaml_head:
+            self.data = yaml.load('\n'.join(lines[yaml_head:yaml_tail]))
+            return lines[yaml_tail+1:]
+        else:
+            return lines[1:]
