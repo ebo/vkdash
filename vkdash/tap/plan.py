@@ -115,7 +115,8 @@ class Plan:
             if message:
                 ok.data['message'] = deepcopy(message)
             # This assumes that it is reporint failure from the todo
-            # and not as a user defined severity
+            # and not as a user defined severity.  This conforms to
+            # the documented example.
             if self.verbose:
                 ok.data['severity'] = deepcopy("todo")
 
@@ -376,10 +377,13 @@ class Plan:
     def parse(self, lines):
         """Parse either a collection of TAP items as either a list of strings,
         or a single string made up of carrage return seperated test
-        items.
+        items.  This version of the code considers the version string
+        and plan specification to be an item in itself -- which can
+        both include YAML metadata
 
         """
-        # remember the TAP version number
+
+        # convert the input to a list of strings if necessary
         if type(lines) is str:
             lines = lines.split('\n')
         elif type(lines) is list:
@@ -388,58 +392,35 @@ class Plan:
             logging.error(" (TAP_Plan:parse) type '%s' not known." % str(type(lines)))
             return
 
-        # remove the version number if available
-        spl = lines[0].strip().lower().split()
-        if spl[0] == "tap" and spl[1] == "version":
-            self.version = deepcopy(lines[0].strip())
-            lines = lines[1:]
-            if 0 == len(lines):
-                return
+        max_test = None
+        while lines:
+            # process each line (including metadata).  The nre tap
+            # parser only strips off the lines it needs and returns
+            # the rest of the input, and an empty list when done.
+            itm = Tap_Item()
+            lines = itm.parse(lines)
 
-        # find the test number range.
-        ### FIXME: might be at the end, or anywere else
-        spl = lines[0].strip().lower().split("..")
-        if spl[0].isdigit() and spl[1].isdigit():
-            if int(spl[0]) != 1:
-                logging.error(" range does not start with '1' !")
-            # FIXME: should we test if the number of expected actually
-            # matches?
-            max_test = int(spl[1])
-            logging.debug(" test range = '%s' .. '%s'"%(spl[0],spl[1]))
-            lines = lines[1:]
-            if 0 == len(lines):
-                return
-
-        # FIXME: rethink the overall processin because all items now
-        # can basically have a YAML data attachment AND the plan can
-        # be anyway.  So, generalizing a version is an item, a diag is
-        # an item, a plan is an item...  We just interpret the first
-        # couple as part of the plan metadata.
-        
-        # first check if there is some metadata
-        #try:
-        #print("===>",lines)
-        #tmp_itm = Tap_Item()
-        #ret = tmp_itm._parse_data(0, lines)
-        #print("===>",ret)
-        #except:
-        #    pass
-
-        # now read in and process all the ok/not ok messages.
-        i = 0
-        llen = len(lines)
-        while i < llen:
-            j = i +1
-            while j < llen:
-                if lines[j].strip()[:2] == "ok" or lines[j].strip()[:6] == "not ok" or lines[j].strip()[0] == "#":
-                    break
-                j += 1
-            line = '\n'.join(lines[i:j])
-
-            itm = Tap_Item(line)
+            if itm.itype in ["pass","fail","skip","todo"]:
+                self.test_count += 1
+                if itm.number <= 0:
+                    self.test_count
+            elif itm.itype == "version":
+                self.version = itm.description
+                del itm
+                continue
+            elif itm.itype == "plan":
+                spl = itm.description.split()
+                logging.debug(" test range = '%s' .. '%s'"%(spl[0],spl[1]))
+                max_test = int(spl[1])
+                continue
             self.tests.append(itm)
-            self.test_count += 1
-            i = j
+
+        # FIXME: test that the tests are in range
+        if max_test:
+            if max_test != self.test_count:
+                logging.debug(" The max test number (%d) and test count (%d) are not equal"%(max_test,self.test_count))
+        else:
+            logging.warn(" Malformed Plan -- the plan was apparently never defined.")
 
     def open(self, fname):
         """Open and parse a a TAP output file.
@@ -454,21 +435,7 @@ class Plan:
         except:
             lines = []
 
-        i = 0
-        llen = len(lines)
-        while i < llen:
-            j = i + 1
-            while j < llen:
-                spl = lines[j].strip().lower().split()
-                if ".." in spl[0]:
-                    j += 1
-                    break
-                if spl[0] in ["#", "tap", "ok", "not"]:
-                    break
-                j += 1
-
-            self.parse(lines[i:j])
-            i = j
+        self.parse(lines)
 
     def count(self, values=None):
         """Return how many of the plan's tests passed, failed, todos, or were skiped."""
@@ -490,7 +457,11 @@ class Plan:
             elif t.is_skip(): values["skip"] += 1
             elif t.is_todo(): values["todo"] += 1
             elif t.failed(): values["fail"] += 1
-            elif t.is_diagnostic(): continue
-            else: logging.error("Invalid code path")
+            elif t.is_unknown():
+                logging.error("Invalid code path *****")
+            else:
+                pass # ignore the diagnostics, plan and version strings.
+
+            continue
 
         return values

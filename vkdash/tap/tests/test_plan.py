@@ -59,6 +59,15 @@ ok 1 - the Plan tests should be empty.\
         print("****",newplan.data)
         plan.ok(newplan.data['test']=="of embedding YAML in the plan", "Testing embedded YAML in plan headder.")
 
+    if True:
+        orig_str = "TAP version 13\nok 1 - retrieving servers from the database\n# need to ping 6 servers\nok 2 - pinged diamond\nok 3 - pinged ruby\nnot ok 4 - pinged saphire\n  ---\n  message: 'hostname \"saphire\" unknown'\n  severity: fail\n  ...\nok 5 - pinged onyx\nnot ok 6 - pinged quartz\n  ---\n  message: 'timeout'\n  severity: fail\n  ...\nok 7 - pinged gold\n1..7\n"
+
+        newplan = Plan()
+        newplan.parse(orig_str)
+        plan.ok(newplan.test_count==7, "Verifying post plan counted properly.")
+
+    
+
     results = os.path.splitext(__file__)[0]+".tap"
     fout = open(results,'w')
     fout.write(str(plan))
