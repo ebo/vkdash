@@ -239,25 +239,6 @@ class Plan:
                 outstr = '\t\t\t\n'
 
             return outstr
-            #istr = str(item).split('\n')
-
-            items = None
-
-            if item.data:
-                outstr = '\t\t<details>\n'
-                #outstr += '\t\t<summary>' + istr[0] + '</summary>\n'  # TODO what should istr be
-                outstr += '\t\t<summary> YAML </summary>\n'
-
-                # FIXME: need to clean up the html display of the YAML data
-                if item.data:
-                    outstr += "\t\t\t\n"
-                    for k,v in item.data.items():
-                        outstr += "    %s: %s\n" % (str(k), str(v))
-                outstr += '\t\t</details>\n'
-            else:
-                outstr = '\t\t\t\n'
-
-            return outstr
 
         ordered_tests = ""
 
@@ -273,12 +254,6 @@ class Plan:
         for i in self.tests:
             test_number += 1
             if i.is_diagnostic():
-                #this_test = '<div class="test" id="' + str(test_number) + '">\n\t'
-                #this_test += '<div class="result diagnostic"></div>\n'
-                #this_test += '\t<div class="result name"> ' + _HandleUserData(i) + '</div>\n'
-                #this_test += '\t<div class="result info">'
-                #this_test += '\t</div>\n</div>\n'
-
                 this_test  = '<tr>'
                 this_test += '<td></td>'
                 this_test += '<td></td>'
@@ -290,15 +265,6 @@ class Plan:
                 ordered_tests += this_test
 
             elif i.passed():
-                #this_test = '<div class="test" id="' + str(test_number) + '">\n\t'
-                #this_test += '<div class="result pass"></div>\n'
-                #this_test += '\t<div class="result name">' + i.description + '</div>\n'
-                #this_test += '\t<div class="result info">'
-                #
-                #tests = _HandleUserData(i)
-                #
-                #this_test += tests + '\t</div>\n</div>\n'
-
                 this_test  = '<tr>'
                 this_test += '<td> ok </td>'
                 this_test += '<td>'+ str(i.number) +'</td>'
@@ -314,15 +280,6 @@ class Plan:
                 overview_passed += '<a href="#' + str(test_number) + '"><div class="view pass"' + ' ' + 'title="' \
                                    + i.description + '"></div></a>\n\t'
             elif i.failed():
-                #this_test = '<div class="test" id="' + str(test_number) + '">\n\t'
-                #this_test += '<div class="result fail"></div>\n'
-                #this_test += '\t<div class="result name">' + i.description + '</div>\n'
-                #this_test += '\t<div class="result info">'
-                #
-                #tests = _HandleUserData(i)
-                #
-                #this_test += tests + '\t</div>\n</div>\n'
-
                 this_test  = '<tr>'
                 this_test += '<td> not ok </td>'
                 this_test += '<td>'+ i.number +'</td>'
@@ -338,16 +295,6 @@ class Plan:
                 overview_failed += '<a href="#' + str(test_number) + '"><div class="view fail"' + ' ' + 'title="' \
                                    + i.description + '"></div></a>\n\t'
             elif i.is_skip():
-                #this_test  = '<div class="test" id="' + str(test_number) + '">\n\t'
-                #this_test += '<div class="result skip"></div>\n'
-                #this_test += '\t<div class="result name">' + i.description 
-                #this_test += ' ...' + i.directive + '</div>\n'
-                #this_test += '\t<div class="result info">'
-                #
-                #tests = _HandleUserData(i)
-                #
-                #this_test += tests + '\t</div>\n</div>\n'
-
                 this_test  = '<tr>'
                 this_test += '<td> ok </td>'
                 this_test += '<td>'+ i.number +'</td>'
@@ -363,16 +310,6 @@ class Plan:
                 overview_skipped += '<a href="#' + str(test_number) + '"><div class="view skip"' + ' ' + 'title="' \
                                     + i.description + '"></div></a>\n\t'
             elif i.is_todo():
-                #this_test  = '<div class="test" id="' + str(test_number) + '">\n\t'
-                #this_test += '<div class="result todo"></div>\n'
-                #this_test += '\t<div class="result name">' + i.description 
-                #this_test += ' ...' + i.directive + '</div>\n'
-                #this_test += '\t<div class="result info">'
-                #
-                #tests = _HandleUserData(i)
-                #
-                #this_test += tests + '\t</div>\n</div>\n'
-
                 this_test  = '<tr>'
                 this_test += '<td> not ok </td>'
                 this_test += '<td>'+ i.number +'</td>'
@@ -390,7 +327,7 @@ class Plan:
 
         ordered_tests += '</table>'
 
-        stats = 'BABABABBA'
+        stats = ''
         if passed or failed or todos or skipped:
             stats = '<div class="report"></div>\n<div class="stat">\n'
 
