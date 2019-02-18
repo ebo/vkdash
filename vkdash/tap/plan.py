@@ -257,7 +257,7 @@ class Plan:
                 this_test  = '<tr>'
                 this_test += '<td></td>'
                 this_test += '<td></td>'
-                this_test += '<td>'+ str(i.description) +'</td>'
+                this_test += '<td> # '+ str(i.description) +'</td>'
                 this_test += '<td>'+ i.directive +'</td>'
                 this_test += '<td>'+ _HandleUserData(i.data) +'</td>'
                 this_test += '</tr>'
@@ -299,7 +299,7 @@ class Plan:
                 this_test += '<td> ok </td>'
                 this_test += '<td>'+ str(i.number) +'</td>'
                 this_test += '<td>'+ i.description +'</td>'
-                this_test += '<td>'+ i.directive +'</td>'
+                this_test += '<td> SKIP'+ i.directive +'</td>'
                 this_test += '<td>'+ _HandleUserData(i.data) +'</td>'
                 this_test += '</tr>'
 
@@ -314,7 +314,7 @@ class Plan:
                 this_test += '<td> not ok </td>'
                 this_test += '<td>'+ str(i.number) +'</td>'
                 this_test += '<td>'+ i.description +'</td>'
-                this_test += '<td>'+ i.directive +'</td>'
+                this_test += '<td> # TODO '+ i.directive +'</td>'
                 this_test += '<td>'+ _HandleUserData(i.data) +'</td>'
                 this_test += '</tr>'
 
