@@ -282,7 +282,7 @@ class Plan:
             elif i.failed():
                 this_test  = '<tr>'
                 this_test += '<td> not ok </td>'
-                this_test += '<td>'+ i.number +'</td>'
+                this_test += '<td>'+ str(i.number) +'</td>'
                 this_test += '<td>'+ i.description +'</td>'
                 this_test += '<td>'+ i.directive +'</td>'
                 this_test += '<td>'+ _HandleUserData(i.data) +'</td>'
@@ -297,7 +297,7 @@ class Plan:
             elif i.is_skip():
                 this_test  = '<tr>'
                 this_test += '<td> ok </td>'
-                this_test += '<td>'+ i.number +'</td>'
+                this_test += '<td>'+ str(i.number) +'</td>'
                 this_test += '<td>'+ i.description +'</td>'
                 this_test += '<td>'+ i.directive +'</td>'
                 this_test += '<td>'+ _HandleUserData(i.data) +'</td>'
@@ -312,7 +312,7 @@ class Plan:
             elif i.is_todo():
                 this_test  = '<tr>'
                 this_test += '<td> not ok </td>'
-                this_test += '<td>'+ i.number +'</td>'
+                this_test += '<td>'+ str(i.number) +'</td>'
                 this_test += '<td>'+ i.description +'</td>'
                 this_test += '<td>'+ i.directive +'</td>'
                 this_test += '<td>'+ _HandleUserData(i.data) +'</td>'
