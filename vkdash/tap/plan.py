@@ -454,3 +454,14 @@ class Plan:
             continue
 
         return values
+
+    def passed(self, todo=True):
+        """Return True if all of the tests pass.  If todo=True, then count
+           todos a a failure.
+        """
+        current = self.count()
+        if current["todo"] != 0:
+            return False
+        if current["fail"] != 0:
+            return False
+        return True
