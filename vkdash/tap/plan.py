@@ -11,7 +11,7 @@ import os, sys, logging
 from vkdash.tap import Tap_Item
 from copy import deepcopy
 from collections import OrderedDict
-import yaml
+import yaml, yamlordereddictloader
 
 #-----------------------------------------------------------------------------
 # Public interface
@@ -55,8 +55,10 @@ class Plan:
         self.atexit = atexit
         self.file_name = outname
         self.verbose = verbose
-        self.data = deepcopy(data)
-
+        self.data = OrderedDict()
+        if data:
+            self.data.update(data)
+            
         if atexit:
             import atexit
             atexit.register(self._atexit_save)
@@ -69,21 +71,18 @@ class Plan:
         self.tests.append(ok)
 
         if data:
-            ok.data = deepcopy(data)
+            ok.data.update(data)
 
     def eq_ok(self, inpt, expect, description='', message=None, skip=None,
               todo=None, severity=None, data=None):
         """Base function for evaluating a test and creating a reported TAP item."""
 
-        # FIXME: remove the overwrite and deep copy issues if possible
-        from copy import deepcopy
-
         ok = Tap_Item()
 
         if data is None:
-            ok.data = {}
+            ok.data  = OrderedDict() 
         else:
-            ok.data = deepcopy(data)
+            ok.data.update(data)
 
         self.test_count += 1
         ok.number = self.test_count
@@ -175,7 +174,9 @@ class Plan:
         if self.data:
             outstr += "\n  ---\n"
 
-            stream = yaml.dump(self.data,  default_flow_style=False, indent=4)
+            stream = yaml.dump(self.data,
+                               Dumper=yamlordereddictloader.Dumper,
+                               default_flow_style=False, indent=4)
             stream = "  "+stream.replace('\n', '\n  ')
             outstr += stream
 
@@ -231,7 +232,9 @@ class Plan:
                 outstr  = '\t\t<details>\n'
                 outstr += '\t\t<summary> YAML </summary>\n'
 
-                stream = yaml.dump(data,  default_flow_style=False, indent=4)
+                stream = yaml.dump(data,
+                                   Dumper=yamlordereddictloader.Dumper,
+                                   default_flow_style=False, indent=4)
                 stream = "  "+stream.replace('\n', '\n  ')
                 outstr += stream
                 outstr += '\t\t</details>\n'
@@ -400,7 +403,7 @@ class Plan:
                 spl = itm.description.split()
                 logging.debug(" test range = '%s' .. '%s'"%(spl[0],spl[1]))
                 max_test = int(spl[1])
-                self.data = deepcopy(itm.data)
+                self.data.update(itm.data)
                 continue
             self.tests.append(itm)
 

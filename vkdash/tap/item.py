@@ -16,7 +16,7 @@ __all__ = ['Tap_Item']
 
 import logging
 from collections import OrderedDict
-import yaml
+import yaml, yamlordereddictloader
 
 # FIXME: this could use to be cleaned up a little more...
 
@@ -66,7 +66,9 @@ class Tap_Item:
         if self.data:
             tap += "\n  ---\n"
 
-            stream = yaml.dump(self.data,  default_flow_style=False, indent=4)
+            stream = yaml.dump(self.data,
+                               Dumper=yamlordereddictloader.Dumper,
+                               default_flow_style=False, indent=4)
             stream = "  "+stream.replace('\n', '\n  ')
             tap += stream
 
@@ -246,7 +248,7 @@ class Tap_Item:
             return []
 
         if yaml_head:
-            self.data = yaml.load('\n'.join(lines[yaml_head:yaml_tail]))
+            self.data.update(yaml.load('\n'.join(lines[yaml_head:yaml_tail])))
             return lines[yaml_tail+1:]
         else:
             return lines[1:]

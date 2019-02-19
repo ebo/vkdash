@@ -143,11 +143,13 @@ class Dashboard:
                 
             outstr += '</div>\n'
             if p.data:
-                import yaml
+                import yaml, yamlordereddictloader
                 outstr += '\t\t<details>\n'
                 outstr += '\t\t<summary> YAML </summary>\n'
 
-                stream = yaml.dump(p.data,  default_flow_style=False, indent=4)
+                stream = yaml.dump(p.data,
+                                   Dumper=yamlordereddictloader.Dumper,
+                                   default_flow_style=False, indent=4)
                 stream = "  "+stream.replace('\n', '\n  ')
                 outstr += stream
                 outstr += '\t\t</details>\n'
