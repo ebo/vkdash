@@ -243,6 +243,19 @@ class Plan:
 
             return outstr
 
+        def _color_it(itm):
+            if itm.is_todo():
+                return ' <div class="report todo"> '
+            elif itm.is_skip():
+                return ' <div class="report skip"> '
+            elif itm.is_diagnostic():
+                return ' <div class="result diagnostic"></div> '
+            elif itm.failed():
+                return ' <div class="report fail"> '
+            elif itm.passed():
+                return ' <div class="report pass"> '
+            return ""
+        
         ordered_tests = ""
 
         ordered_tests += '<table style="width:100%">'
@@ -258,7 +271,7 @@ class Plan:
             test_number += 1
             if i.is_diagnostic():
                 this_test  = '<tr>'
-                this_test += '<td></td>'
+                this_test += '<td>'+_color_it(i)+' </div></td>'
                 this_test += '<td></td>'
                 this_test += '<td> # '+ str(i.description) +'</td>'
                 this_test += '<td>'+ i.directive +'</td>'
@@ -269,7 +282,7 @@ class Plan:
 
             elif i.passed():
                 this_test  = '<tr>'
-                this_test += '<td> ok </td>'
+                this_test += '<td>'+_color_it(i)+' ok </div></td>'
                 this_test += '<td>'+ str(i.number) +'</td>'
                 this_test += '<td>'+ i.description +'</td>'
                 this_test += '<td>'+ i.directive +'</td>'
@@ -284,7 +297,7 @@ class Plan:
                                    + i.description + '"></div></a>\n\t'
             elif i.failed():
                 this_test  = '<tr>'
-                this_test += '<td> not ok </td>'
+                this_test += '<td>'+_color_it(i)+' not ok </div></td>'
                 this_test += '<td>'+ str(i.number) +'</td>'
                 this_test += '<td>'+ i.description +'</td>'
                 this_test += '<td>'+ i.directive +'</td>'
@@ -299,7 +312,7 @@ class Plan:
                                    + i.description + '"></div></a>\n\t'
             elif i.is_skip():
                 this_test  = '<tr>'
-                this_test += '<td> ok </td>'
+                this_test += '<td>'+_color_it(i)+' ok </div></td>'
                 this_test += '<td>'+ str(i.number) +'</td>'
                 this_test += '<td>'+ i.description +'</td>'
                 this_test += '<td> SKIP'+ i.directive +'</td>'
@@ -314,7 +327,7 @@ class Plan:
                                     + i.description + '"></div></a>\n\t'
             elif i.is_todo():
                 this_test  = '<tr>'
-                this_test += '<td> not ok </td>'
+                this_test += '<td>'+_color_it(i)+' not ok </div></td>'
                 this_test += '<td>'+ str(i.number) +'</td>'
                 this_test += '<td>'+ i.description +'</td>'
                 this_test += '<td> # TODO '+ i.directive +'</td>'
