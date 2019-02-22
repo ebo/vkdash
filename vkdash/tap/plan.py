@@ -63,6 +63,9 @@ class Plan:
             import atexit
             atexit.register(self._atexit_save)
 
+        self.has_plan = False
+        print("this is the plan.......")
+
     def diagnostic(self, message, data=None):
         """Create an embedded diagnostic message in the plan."""
         ok = Tap_Item()
@@ -404,6 +407,7 @@ class Plan:
                 logging.debug(" test range = '%s' .. '%s'"%(spl[0],spl[1]))
                 max_test = int(spl[1])
                 self.data.update(itm.data)
+                self.has_pan = True
                 continue
             self.tests.append(itm)
 

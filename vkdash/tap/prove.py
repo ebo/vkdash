@@ -176,8 +176,11 @@ def prove(inf=None, exts=None, config=None, outdir='', date=None):
                 # mangle the results
                 logging.info(" moving %s to %s" % (tapname, new_tap))
                 shutil.move(tapname, new_tap)
-            
+
             plan.open(new_tap)
+            print("***** has_plan",plan.has_plan)
+            if not plan.has_plan:
+                continue
             
             counts = plan.count()
             plans.append({"file": new_tap, "passed": counts['pass'], "failed": counts['fail'], "skipped": counts['skip'], "todos": counts['todo']})
