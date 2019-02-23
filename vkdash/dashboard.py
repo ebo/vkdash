@@ -1,6 +1,8 @@
 from vkdash.header import *
 from vkdash.tap import *
 from vkdash.tap import is_tap
+import simplejson as json
+import yaml, yamlordereddictloader
 
 # TODO refactor open / walk recursive confusion
 # TODO NOSHIP FIXME dashboard output different (too many configurations) on OSX and LINUX. May be a problem with VKprove.
@@ -21,6 +23,163 @@ class Dashboard:
 
     def __init__(self):
         pass
+
+    def _yaml2html(self, data):
+        import yaml, yamlordereddictloader
+
+        if not data:
+            return ""
+        
+        htmlstr  = '\t\t<details>\n'
+        htmlstr += '\t\t<summary> YAML </summary>\n'
+        htmlstr += "<pre>\n"
+        htmlstr += yaml.dump(data, Dumper=yamlordereddictloader.Dumper,
+                             default_flow_style=False, indent=4)
+        htmlstr += "</pre>\n"
+        htmlstr += '\t\t</details>\n'
+        
+        return htmlstr
+    
+    def _plan_html(self, plan, test_number=0):
+        """Build output as HTML output"""
+        passed = 0
+        overview_passed = ""
+
+        failed = 0
+        overview_failed = ""
+
+        skipped = 0
+        overview_skipped = ""
+
+        todos = 0
+        overview_todo = ""
+
+        plan.saved = True
+
+        def _color_it(itm):
+            if itm.is_todo():
+                return ' <div class="report todo"> '
+            elif itm.is_skip():
+                return ' <div class="report skip"> '
+            elif itm.is_diagnostic():
+                return ' <div class="result diagnostic"></div> '
+            elif itm.failed():
+                return ' <div class="report fail"> '
+            elif itm.passed():
+                return ' <div class="report pass"> '
+            return ""
+        
+        ordered_tests = ""
+
+        ordered_tests += '<table style="width:100%">'
+        ordered_tests += '<tr>'
+        ordered_tests += '<th>Pass</th>'
+        ordered_tests += '<th>Test #</th>'
+        ordered_tests += '<th>Description</th>'
+        ordered_tests += '<th>Directive</th>'
+        ordered_tests += '<th>Metadata</th>'
+        ordered_tests += '</tr>'
+
+        for i in plan.tests: 
+            test_number += 1
+            if i.is_diagnostic():
+                this_test  = '<tr>'
+                this_test += '<td>'+_color_it(i)+' </div></td>'
+                this_test += '<td></td>'
+                this_test += '<td> # '+ str(i.description) +'</td>'
+                this_test += '<td>'+ i.directive +'</td>'
+                this_test += '<td>'+ self._yaml2html(i.data) +'</td>'
+                this_test += '</tr>'
+
+                ordered_tests += this_test
+
+            elif i.passed():
+                this_test  = '<tr>'
+                this_test += '<td>'+_color_it(i)+' ok </div></td>'
+                this_test += '<td>'+ str(i.number) +'</td>'
+                this_test += '<td>'+ i.description +'</td>'
+                this_test += '<td>'+ i.directive +'</td>'
+                this_test += '<td>'+ self._yaml2html(i.data) +'</td>'
+                this_test += '</tr>'
+
+                passed += 1
+
+                ordered_tests += this_test
+
+                overview_passed += '<a href="#' + str(test_number) + '"><div class="view pass"' + ' ' + 'title="' \
+                                   + i.description + '"></div></a>\n\t'
+            elif i.failed():
+                this_test  = '<tr>'
+                this_test += '<td>'+_color_it(i)+' not ok </div></td>'
+                this_test += '<td>'+ str(i.number) +'</td>'
+                this_test += '<td>'+ i.description +'</td>'
+                this_test += '<td>'+ i.directive +'</td>'
+                this_test += '<td>'+ self._yaml2html(i.data) +'</td>'
+                this_test += '</tr>'
+
+                failed += 1
+
+                ordered_tests += this_test
+
+                overview_failed += '<a href="#' + str(test_number) + '"><div class="view fail"' + ' ' + 'title="' \
+                                   + i.description + '"></div></a>\n\t'
+            elif i.is_skip():
+                this_test  = '<tr>'
+                this_test += '<td>'+_color_it(i)+' ok </div></td>'
+                this_test += '<td>'+ str(i.number) +'</td>'
+                this_test += '<td>'+ i.description +'</td>'
+                this_test += '<td> SKIP'+ i.directive +'</td>'
+                this_test += '<td>'+ self._yaml2html(i.data) +'</td>'
+                this_test += '</tr>'
+
+                skipped += 1
+                
+                ordered_tests += this_test
+
+                overview_skipped += '<a href="#' + str(test_number) + '"><div class="view skip"' + ' ' + 'title="' \
+                                    + i.description + '"></div></a>\n\t'
+            elif i.is_todo():
+                this_test  = '<tr>'
+                this_test += '<td>'+_color_it(i)+' not ok </div></td>'
+                this_test += '<td>'+ str(i.number) +'</td>'
+                this_test += '<td>'+ i.description +'</td>'
+                this_test += '<td> # TODO '+ i.directive +'</td>'
+                this_test += '<td>'+ self._yaml2html(i.data) +'</td>'
+                this_test += '</tr>'
+
+                todos += 1
+
+                ordered_tests += this_test
+
+                overview_todo += '<a href="#' + str(test_number) + '"><div class="view todo"' + ' ' + 'title="' \
+                                 + i.description + '"></div></a>\n\t'
+
+        ordered_tests += '</table>'
+
+        stats = ''
+        if passed or failed or todos or skipped:
+            stats = '<div class="report"></div>\n<div class="stat">\n'
+
+            if failed:
+                stats += '<b><div class="report fail"> Fail:' + str(failed) + '</div></b>\n'
+
+            if todos:
+                stats += '<b><div class="report todo"> ToDo:' + str(todos) + '</div></b>\n'
+
+            if skipped:
+                stats += '<b><div class="report skip"> Skip:' + str(skipped) + '</div></b>\n'
+
+            if passed:
+                stats += '<b><div class="report pass"> Pass:' + str(passed) + '</div></b>\n'
+
+            stats += '</div>\n'
+
+        overview_html = '<div class="overview">\n'
+        overview_html += overview_failed + overview_todo + overview_skipped + overview_passed
+        overview_html += '</div>\n'
+        test_html = ordered_tests
+
+        return stats, overview_html, test_html, test_number
 
     def __repr__(self):
         # default colors
@@ -109,7 +268,8 @@ class Dashboard:
         old_config = None
         tn = 0
         for p in self.plans:
-            stats, overview, body, test_number = p.html(tn)
+            stats, overview, body, test_number = self._plan_html(p, tn)
+
             tn += test_number
             totals = p.count()
 
@@ -143,16 +303,7 @@ class Dashboard:
                 
             outstr += '</div>\n'
             if p.data:
-                import yaml, yamlordereddictloader
-                outstr += '\t\t<details>\n'
-                outstr += '\t\t<summary> YAML </summary>\n'
-
-                stream = yaml.dump(p.data,
-                                   Dumper=yamlordereddictloader.Dumper,
-                                   default_flow_style=False, indent=4)
-                stream = "  "+stream.replace('\n', '\n  ')
-                outstr += stream
-                outstr += '\t\t</details>\n'
+                outstr += self._yaml2html(p.data)
 
             outstr += overview
             outstr += '<details><summary>\n'\
