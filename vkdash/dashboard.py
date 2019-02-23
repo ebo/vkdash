@@ -1,7 +1,6 @@
 from vkdash.header import *
 from vkdash.tap import *
 from vkdash.tap import is_tap
-import simplejson as json
 import yaml, yamlordereddictloader
 
 # TODO refactor open / walk recursive confusion
@@ -25,8 +24,6 @@ class Dashboard:
         pass
 
     def _yaml2html(self, data):
-        import yaml, yamlordereddictloader
-
         if not data:
             return ""
         
@@ -57,22 +54,45 @@ class Dashboard:
         plan.saved = True
 
         def _color_it(itm):
+            this_item = '<tr>\n'
+
             if itm.is_todo():
-                return ' <div class="report todo"> '
+                this_item += '  <td><div class="report todo"></div></td><td>\n'
+                msg = "not ok"
             elif itm.is_skip():
-                return ' <div class="report skip"> '
+                msg = "ok"
+                this_item += '  <td><div class="report skip"></div></td>\n'
             elif itm.is_diagnostic():
-                return ' <div class="result diagnostic"></div> '
+                this_item += '  <td><div class="report diag"></div></td>\n'
+                msg = "#"
             elif itm.failed():
-                return ' <div class="report fail"> '
+                this_item += '  <td><div class="report fail"></div></td>\n'
+                msg = "not ok"
             elif itm.passed():
-                return ' <div class="report pass"> '
-            return ""
+                this_item += '  <td><div class="report pass"></div></td>\n'
+                msg = "ok"
+            else:
+                print("error: bad item type... look into it...")
+
+            this_item += '  <td>'+str(msg)+'</td>\n'
+
+            if itm.number > 0:
+                this_item += '  <td>'+str(itm.number)+'</td>\n'
+            else:
+                this_item += '  <td></td>\n'
+
+            this_item += '  <td>'+ str(i.description) +'</td>\n'
+            this_item += '  <td>'+ i.directive +'</td>\n'
+            this_item += '  <td>'+ self._yaml2html(i.data) +'</td>\n'
+            this_item += '</tr>\n'
+
+            return this_item
         
         ordered_tests = ""
 
         ordered_tests += '<table style="width:100%">'
         ordered_tests += '<tr>'
+        ordered_tests += '<th></th>'
         ordered_tests += '<th>Pass</th>'
         ordered_tests += '<th>Test #</th>'
         ordered_tests += '<th>Description</th>'
@@ -82,77 +102,33 @@ class Dashboard:
 
         for i in plan.tests: 
             test_number += 1
-            if i.is_diagnostic():
-                this_test  = '<tr>'
-                this_test += '<td>'+_color_it(i)+' </div></td>'
-                this_test += '<td></td>'
-                this_test += '<td> # '+ str(i.description) +'</td>'
-                this_test += '<td>'+ i.directive +'</td>'
-                this_test += '<td>'+ self._yaml2html(i.data) +'</td>'
-                this_test += '</tr>'
-
-                ordered_tests += this_test
-
-            elif i.passed():
-                this_test  = '<tr>'
-                this_test += '<td>'+_color_it(i)+' ok </div></td>'
-                this_test += '<td>'+ str(i.number) +'</td>'
-                this_test += '<td>'+ i.description +'</td>'
-                this_test += '<td>'+ i.directive +'</td>'
-                this_test += '<td>'+ self._yaml2html(i.data) +'</td>'
-                this_test += '</tr>'
-
+            ordered_tests += _color_it(i)
+            if i.passed():
                 passed += 1
-
-                ordered_tests += this_test
-
-                overview_passed += '<a href="#' + str(test_number) + '"><div class="view pass"' + ' ' + 'title="' \
-                                   + i.description + '"></div></a>\n\t'
+                overview_passed += '<a href="#' + str(test_number) + \
+                                   '"><div class="view pass"' + ' ' + \
+                                   'title="' + i.description + \
+                                   '"></div></a>\n\t'
             elif i.failed():
-                this_test  = '<tr>'
-                this_test += '<td>'+_color_it(i)+' not ok </div></td>'
-                this_test += '<td>'+ str(i.number) +'</td>'
-                this_test += '<td>'+ i.description +'</td>'
-                this_test += '<td>'+ i.directive +'</td>'
-                this_test += '<td>'+ self._yaml2html(i.data) +'</td>'
-                this_test += '</tr>'
-
                 failed += 1
-
-                ordered_tests += this_test
-
-                overview_failed += '<a href="#' + str(test_number) + '"><div class="view fail"' + ' ' + 'title="' \
-                                   + i.description + '"></div></a>\n\t'
+                overview_failed += '<a href="#' + str(test_number) + \
+                                   '"><div class="view fail"' + ' ' + \
+                                   'title="' + i.description + \
+                                   '"></div></a>\n\t'
             elif i.is_skip():
-                this_test  = '<tr>'
-                this_test += '<td>'+_color_it(i)+' ok </div></td>'
-                this_test += '<td>'+ str(i.number) +'</td>'
-                this_test += '<td>'+ i.description +'</td>'
-                this_test += '<td> SKIP'+ i.directive +'</td>'
-                this_test += '<td>'+ self._yaml2html(i.data) +'</td>'
-                this_test += '</tr>'
-
                 skipped += 1
-                
-                ordered_tests += this_test
-
-                overview_skipped += '<a href="#' + str(test_number) + '"><div class="view skip"' + ' ' + 'title="' \
-                                    + i.description + '"></div></a>\n\t'
+                overview_skipped += '<a href="#' + str(test_number) + \
+                                    '"><div class="view skip"' + ' ' + \
+                                    'title="' + i.description + \
+                                    '"></div></a>\n\t'
             elif i.is_todo():
-                this_test  = '<tr>'
-                this_test += '<td>'+_color_it(i)+' not ok </div></td>'
-                this_test += '<td>'+ str(i.number) +'</td>'
-                this_test += '<td>'+ i.description +'</td>'
-                this_test += '<td> # TODO '+ i.directive +'</td>'
-                this_test += '<td>'+ self._yaml2html(i.data) +'</td>'
-                this_test += '</tr>'
-
                 todos += 1
-
-                ordered_tests += this_test
-
-                overview_todo += '<a href="#' + str(test_number) + '"><div class="view todo"' + ' ' + 'title="' \
-                                 + i.description + '"></div></a>\n\t'
+                overview_todo += '<a href="#' + str(test_number) + \
+                                 '"><div class="view todo"' + ' ' + \
+                                 'title="' + i.description + \
+                                 '"></div></a>\n\t'
+            elif not i.is_diagnostic():
+                print("error: unknown item type for (%s)"%str(i))
 
         ordered_tests += '</table>'
 
@@ -201,7 +177,7 @@ class Dashboard:
         .pass{background-color: '+VK_PASS+';}\n\
         .fail{background-color: '+VK_FAIL+';}\n\
         .todo{background-color: '+VK_TODO+';}\n\
-        .diagnostic{background-color: '+VK_DIAG+';}\n\
+        .diag{background-color: '+VK_DIAG+';}\n\
         .name{}\n'
 
         outstr = header_lead + colors + header_end
@@ -365,7 +341,7 @@ def find_tap_files(inf=".", ext=".tap"):
 def main():
     import argparse
     import os, sys, logging
-    parser = argparse.ArgumentParser(prog=os.path.basename(os.path.basename(sys.argv[0])))  # TODO pep complains about line length. is the double basename function necessary?
+    parser = argparse.ArgumentParser(prog=os.path.basename(sys.argv[0]))
     parser.add_argument("infiles", type=str, nargs='+',
                         help="input files or directories")
 
