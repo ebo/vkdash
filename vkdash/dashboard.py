@@ -340,7 +340,7 @@ def find_tap_files(inf=".", ext=".tap"):
 
 def main():
     import argparse
-    import os, sys, logging
+    import sys
     parser = argparse.ArgumentParser(prog=os.path.basename(sys.argv[0]))
     parser.add_argument("infiles", type=str, nargs='+',
                         help="input files or directories")

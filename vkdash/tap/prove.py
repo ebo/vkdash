@@ -18,7 +18,6 @@ import os
 import logging
 import shutil
 from vkdash.tap import *
-from collections import OrderedDict  # TODO unused import
 import datetime
 
 
@@ -201,7 +200,7 @@ def main():
     """
 
     import argparse
-    import os, sys, logging  # TODO pep doesn't like multiple imports on the same line ... worth discussing?
+    import sys
     parser = argparse.ArgumentParser(prog=os.path.basename(os.path.basename(sys.argv[0])))
     parser.add_argument("infiles", type=str, nargs='+',
                         help="input files or directorys")
