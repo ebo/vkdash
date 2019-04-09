@@ -274,7 +274,7 @@ class Plan:
         """Open and parse a a TAP output file.
 
         """
-        logging.info(" open and reading '%s'"%fname)
+        logging.debug(" open and reading '%s'"%fname)
 
         self.file_name = fname
         try:

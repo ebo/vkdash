@@ -38,7 +38,7 @@ def _is_test(infile, exts=None):
     if not (match and _ext in exts):
         return False
 
-    logging.info(" '%s' is a test." % infile)
+    logging.debug(" '%s' is a test." % infile)
     return True
 
 
@@ -173,7 +173,7 @@ def prove(inf=None, exts=None, config=None, outdir='', date=None):
             if os.path.exists(tapname):
                 # when we have configurations set, we need to name
                 # mangle the results
-                logging.info(" moving %s to %s" % (tapname, new_tap))
+                logging.debug(" moving %s to %s" % (tapname, new_tap))
                 shutil.move(tapname, new_tap)
             
             plan.open(new_tap)
@@ -229,8 +229,8 @@ def main():
         logging.warn(" output directory '%s' does not exist" % args.outdir)
         os.makedirs(args.outdir)
 
-    logging.info(" inputs = '%s'" % args.infiles)
-    logging.info(" ")
+    logging.debug(" inputs = '%s'" % args.infiles)
+    logging.debug(" ")
 
     date = args.date
     if args.config and not args.date:
