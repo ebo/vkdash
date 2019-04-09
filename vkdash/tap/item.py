@@ -248,7 +248,7 @@ class Tap_Item:
             return []
 
         if yaml_head:
-            self.data.update(yaml.load('\n'.join(lines[yaml_head:yaml_tail])))
+            self.data.update(yaml.safe_load('\n'.join(lines[yaml_head:yaml_tail])))
             return lines[yaml_tail+1:]
         else:
             return lines[1:]
