@@ -66,7 +66,7 @@ def find_tests(inf=".", exts=None):
         return tree
 
 
-def prove(inf=None, exts=None, config=None, outdir='', date=None):
+def prove(inf=None, exts=None, config=None, outdir='', date=None, run=True):
     """find all files in the collection of files or directores which are
     recognized as test programs, run them, and then sumerize the
     results.
@@ -146,12 +146,12 @@ def prove(inf=None, exts=None, config=None, outdir='', date=None):
             else:
                 cmd = "python " + fname
                 
-            logging.info("")
-            logging.info(" running cmd: %s" % cmd)
-
-            status = subprocess.call(cmd, shell=True)  # FIXME we have to ensure shell use is safe!
-            if status != 0:
-                logging.error(" test '%s' returned a status of %s" % (fname, str(status)))
+            if run and not fname.endswith(".tap"):
+                logging.info("")
+                logging.info(" running cmd: %s" % cmd)
+                status = subprocess.call(cmd, shell=True)  # FIXME we have to ensure shell use is safe!
+                if status != 0:
+                    logging.error(" test '%s' returned a status of %s" % (fname, str(status)))
   
             plan = Plan()  # plan is shadowing another 'plan' decl somewhere, somehow (as claims by pycharm)
 
@@ -176,6 +176,7 @@ def prove(inf=None, exts=None, config=None, outdir='', date=None):
                 logging.debug(" moving %s to %s" % (tapname, new_tap))
                 shutil.move(tapname, new_tap)
             
+            logging.info(" processing TAP file: %s" % new_tap)
             plan.open(new_tap)
             
             counts = plan.count()
@@ -214,6 +215,12 @@ def main():
     parser.add_argument("-D", "--date", type=str, default='',
                         help="use the date")
     
+    parser.add_argument("-N", "--no-run", action="store_true", default=False, 
+                        help="do not run as a command, and process existant TAP file: default=%(default)s]")
+
+    parser.add_argument("-R", "--raw", action="store_true", default=False, 
+                        help="process the taw TAP files: default=%(default)s]")
+        
     parser.add_argument("-v", "--verbose", action="store_true", default=False, 
                         help="produce diagnostic output [optional: default=%(default)s]")
     parser.add_argument("-d", "--debug", action="store_true", default=False, 
@@ -236,7 +243,19 @@ def main():
     if args.config and not args.date:
         date = datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
 
-    results, totals = prove(args.infiles, config=args.config, date=date, outdir=args.outdir)
+    if args.raw:
+        tapfiles = []
+        for f in args.infiles:
+            logging.info(" processing raw '%s'"%f)
+            for root, dir, files in os.walk("."):
+                import fnmatch
+                for items in fnmatch.filter(files, "*.tap"):
+                    tapfiles.append(os.path.join(root,items))
+    else:
+        tapfiles = args.infiles
+            
+
+    results, totals = prove(tapfiles, config=args.config, date=date, outdir=args.outdir, run=not args.no_run)
 
     print ("\nTest Summary Report")
     if args.config:
@@ -245,14 +264,12 @@ def main():
     print ("===================")
 
     for r in results:
-        print ("%s | Passed: %d Failed: %d" % (r['file'], r['passed'], r['failed']))
-        if r['todos']:
-            print (" ToDos: %d" % r['todos'])
-        if r['skipped']:
-            print (" ToDos: %d" % r['skipped'])
+        print ("Passed: %3d Failed: %3d ToDos: %3d Skips: %3d | %s" % (r['passed'], r['failed'], r['todos'], r['skipped'], r['file']))
 
     print ("===================")
-    print ("Total Plans: %d  Passed: %d  Failed: %d" % (len(results), totals['total_pass'], totals['total_fail']))
+    print ("Total Plans: %3d  Passed: %3d Failed: %3d ToDos: %3d Skips: %3d" %
+           (len(results), totals['total_pass'], totals['total_fail'], totals['total_todo'], totals['total_skip']))
+    #print ("Total Plans: %3d  Passed: %3d  Failed: %3d" % (len(results), totals['total_pass'], totals['total_fail']))
     if totals['total_fail'] == 0:
         print ("\nResult: Passed\n")
     else:

@@ -21,11 +21,11 @@ import yaml, yamlordereddictloader
 # FIXME: this could use to be cleaned up a little more...
 
 class Tap_Item:
-    def __init__(self, str=None): #str shadowing python's str
+    def __init__(self, str=None, fname=None): #str shadowing python's str
         """Common constructor shared by all TAP items."""
         self.reset()
         if str is not None:
-            self.parse(str)
+            self.parse(str, fname)
 
     def __repr__(self):
         """Build a nice string representation of this test item"""
@@ -51,9 +51,10 @@ class Tap_Item:
         elif self.is_empty():
             tap = ""
         else:
-            logging.error(" internal error: type currently not supported.")
-            raise()
+            logging.warn(" internal error: type currently not supported.")
+            #raise()
             #return "what type is this"
+            tap = "UNKNOWN"
 
         if self.number > 0:
             tap += " %s" % str(self.number)
@@ -130,8 +131,26 @@ class Tap_Item:
         # have to define the meaning.
         return False
 
+    def __parse_number__(self, pstr):
+        num = 0
 
-    def parse(self, line):
+        pstr = pstr.lstrip()
+        if not pstr[0].isdigit():
+            return False,0,pstr
+        
+        for res in range(0,len(pstr)):
+            if not pstr[res].isdigit():
+                break
+
+        if res == len(pstr)-1:
+            res += 1
+
+        num = int(pstr[:res])
+        pstr = pstr[res:].lstrip()
+
+        return True,num,pstr
+    
+    def parse(self, line, fname=None):
 
         """Parse the item from a collection of strings, or a single string
            that is carrage return seperated
@@ -148,7 +167,9 @@ class Tap_Item:
         elif type(line) is list:
             lines = line
         else:
-            logging.error(" (TAP_Item:parse) type '%s' not known." % str(type(line)))
+            logging.warn("")
+            logging.warn(" in file: '%s'"%fname)
+            logging.warn(" (TAP_Item:parse) type '%s' not known." % str(type(line)))
             return []
         line = lines[0]
 
@@ -188,14 +209,17 @@ class Tap_Item:
             # otherwise...
             if line:
                 # parse optional test number
-                if line.strip()[0].isdigit():
-                    spl = line.strip().split(' ')
-                    self.number = int(spl[0])
-                    line = line.strip()[len(spl[0]):]
+                # also remove the strips...
+                tst,num,line = self.__parse_number__(line)
+                if tst:
+                    self.number = num
 
                 # remove optional dash
-                if line.strip()[0] == '-':
-                    line = line.strip()[1:]
+                try:
+                    if line.strip()[0] == '-':
+                        line = line.strip()[1:].lstrip()
+                except:
+                    pass
 
                 # find the length of the descriptions
                 try:
@@ -212,12 +236,16 @@ class Tap_Item:
                     if spl[0].lower() == "skip":
                         # verify that the ok valuse is appropriate
                         if not self.ok:
-                            logging.error(" TAP item should return 'ok' when it is skipped.")
+                            logging.warn("")
+                            logging.warn(" in file: '%s'"%fname)
+                            logging.warn(" TAP item should return 'ok' when it is skipped.")
                         ppos = 4
                         self.itype = "skip"
                     elif spl[0].lower() == "todo":
                         if self.ok:
-                            logging.error(" TAP item should return 'ok' when it is a ToDo.")
+                            logging.warn("")
+                            logging.warn(" in file: '%s'"%fname)
+                            logging.warn(" TAP item should return 'ok' when it is a ToDo.")
                         ppos = 4
                         self.itype = "todo"
                     else:
@@ -226,8 +254,10 @@ class Tap_Item:
                     self.directive = line.strip()[ppos:].strip()
 
         if self.itype == "unknown":
-            logging.error(" there should be no undefined types at this point.")
-
+            logging.warn("")
+            logging.warn(" in file: '%s'"%fname)
+            logging.warn(" undefined item type in '%s'"%lines[0])
+            
         if len(lines) <= 1:
             return []
 
@@ -244,7 +274,9 @@ class Tap_Item:
 
         # sanity check
         if bool(yaml_head) != bool(yaml_tail):
-            logging.error(" Malformed YAML expression at or near: \n%s"%'\n'.join(lines))
+            logging.warn("")
+            logging.warn(" in file: '%s'"%fname)
+            logging.warn(" Malformed YAML expression at or near: \n%s"%'\n'.join(lines))
             return []
 
         if yaml_head:

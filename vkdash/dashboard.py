@@ -72,7 +72,8 @@ class Dashboard:
                 this_item += '  <td><div class="report pass"></div></td>\n'
                 msg = "ok"
             else:
-                print("error: bad item type... look into it...")
+                print("warning: bad item type... look into it...")
+                msg = "UNKNOWN"
 
             this_item += '  <td>'+str(msg)+'</td>\n'
 
@@ -351,6 +352,9 @@ def main():
     parser.add_argument("-O", "--outdir", default=".",
                         help="output directory [optional: default=%(default)s]")
 
+    parser.add_argument("-R", "--raw", action="store_true", default=False, 
+                        help="process the taw TAP files: default=%(default)s]")
+        
     parser.add_argument("-v", "--verbose", action="store_true", default=False, 
                         help="produce diagnostic output [optional: default=%(default)s]")
     parser.add_argument("-d", "--debug", action="store_true", default=False, 
@@ -375,8 +379,19 @@ def main():
 
     dash = Dashboard()
     dash.set_accessible(args.accessible)
-    
-    for f in args.infiles:
+
+    if args.raw:
+        tapfiles = []
+        for f in args.infiles:
+            logging.info(" processing raw '%s'"%f)
+            for root, dir, files in os.walk("."):
+                import fnmatch
+                for items in fnmatch.filter(files, "*.tap"):
+                    tapfiles.append(os.path.join(root,items))
+    else:
+        tapfiles = args.infiles
+            
+    for f in tapfiles:
         dash.open(f)
 
     if outfile is not None:

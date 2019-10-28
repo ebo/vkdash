@@ -236,7 +236,7 @@ class Plan:
         elif type(lines) is list:
             pass
         else:
-            logging.error(" (TAP_Plan:parse) type '%s' not known." % str(type(lines)))
+            logging.warn(" (TAP_Plan:parse) type '%s' not known." % str(type(lines)))
             return
 
         max_test = None
@@ -245,7 +245,7 @@ class Plan:
             # parser only strips off the lines it needs and returns
             # the rest of the input, and an empty list when done.
             itm = Tap_Item()
-            lines = itm.parse(lines)
+            lines = itm.parse(lines, fname=self.file_name)
 
             if itm.itype in ["pass","fail","skip","todo"]:
                 self.test_count += 1
@@ -263,12 +263,16 @@ class Plan:
                 continue
             self.tests.append(itm)
 
-        # FIXME: test that the tests are in range
-        if max_test:
+        # test that the tests are in range
+        if isinstance(max_test, int):
             if max_test != self.test_count:
-                logging.debug(" The max test number (%d) and test count (%d) are not equal"%(max_test,self.test_count))
+                logging.warn("")
+                logging.warn(" in file: '%s'"%self.file_name)
+                logging.warn(" The max test number (%d) and test count (%d) are not equal"%(max_test,self.test_count))
         else:
-            logging.warn(" Malformed Plan -- the plan was apparently never defined.")
+            logging.warn("")
+            logging.warn(" in file: '%s'"%self.file_name)
+            logging.warn(" Malformed Plan -- plan never defined.")
 
     def open(self, fname):
         """Open and parse a a TAP output file.
@@ -306,7 +310,10 @@ class Plan:
             elif t.is_todo(): values["todo"] += 1
             elif t.failed(): values["fail"] += 1
             elif t.is_unknown():
-                logging.error("Invalid code path *****")
+                #logging.error("")
+                #logging.error(" in file: '%s'"%self.file_name)
+                #logging.error(" unknown item type")
+                pass # errors/warnings handled in item
             else:
                 pass # ignore the diagnostics, plan and version strings.
 
