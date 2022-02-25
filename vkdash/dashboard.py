@@ -1,7 +1,19 @@
 from vkdash.header import *
 from vkdash.tap import *
 from vkdash.tap import is_tap
-import yaml, yamlordereddictloader
+
+import yaml # FIXME: clean up yaml.bla...
+
+def dumper(key, itm, indent=4, level=0):
+    stream = " " * (indent * level) + key + ":"
+    if isinstance(itm, dict):
+        stream += "\n"
+        for k in itm:
+            stream += dumper(k, itm[k], indent, level+1)
+    else:
+        stream += " " + str(itm) + "\n"
+    
+    return stream
 
 # TODO refactor open / walk recursive confusion
 # TODO NOSHIP FIXME dashboard output different (too many configurations) on OSX and LINUX. May be a problem with VKprove.
@@ -30,8 +42,10 @@ class Dashboard:
         htmlstr  = '\t\t<details>\n'
         htmlstr += '\t\t<summary> YAML </summary>\n'
         htmlstr += "<pre>\n"
-        htmlstr += yaml.dump(data, Dumper=yamlordereddictloader.Dumper,
-                             default_flow_style=False, indent=4)
+
+        for k in data:
+            htmlstr += dumper(k,data[k],indent=4)
+
         htmlstr += "</pre>\n"
         htmlstr += '\t\t</details>\n'
         

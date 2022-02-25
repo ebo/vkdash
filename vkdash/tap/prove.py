@@ -254,7 +254,6 @@ def main():
     else:
         tapfiles = args.infiles
             
-
     results, totals = prove(tapfiles, config=args.config, date=date, outdir=args.outdir, run=not args.no_run)
 
     print ("\nTest Summary Report")

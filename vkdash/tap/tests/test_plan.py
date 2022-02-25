@@ -6,6 +6,7 @@ def test_plan():
     try:
         meta = {"test":"of embedding YAML in the plan"}
         plan = Plan(data=meta)
+        print("(((",meta)
     except:
         print ("ERROR: creating a plan failed...")
         exit(-1)

@@ -11,7 +11,18 @@ import os, sys, logging
 from vkdash.tap import Tap_Item
 from copy import deepcopy
 from collections import OrderedDict
-import yaml, yamlordereddictloader
+
+def dumper(key, itm, indent=4, level=0):
+    stream = " " * (indent * level) + key + ":"
+    if isinstance(itm, dict):
+        stream += "\n"
+        for k in itm:
+            stream += dumper(k, itm[k], indent, level+1)
+    else:
+        stream += " " + str(itm) + "\n"
+    
+    return stream
+
 
 #-----------------------------------------------------------------------------
 # Public interface
@@ -174,9 +185,10 @@ class Plan:
         if self.data:
             outstr += "\n  ---\n"
 
-            stream = yaml.dump(self.data,
-                               Dumper=yamlordereddictloader.Dumper,
-                               default_flow_style=False, indent=4)
+            stream = ""
+            for k in self.data:
+                stream += dumper(k,self.data[k],indent=4)
+
             stream = "  "+stream.replace('\n', '\n  ')
             outstr += stream
 

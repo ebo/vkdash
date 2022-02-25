@@ -16,7 +16,18 @@ __all__ = ['Tap_Item']
 
 import logging
 from collections import OrderedDict
-import yaml, yamlordereddictloader
+import yaml
+
+def dumper(key, itm, indent=4, level=0):
+    stream = " " * (indent * level) + key + ":"
+    if isinstance(itm, dict):
+        stream += "\n"
+        for k in itm:
+            stream += dumper(k, itm[k], indent, level+1)
+    else:
+        stream += " " + str(itm) + "\n"
+    
+    return stream
 
 # FIXME: this could use to be cleaned up a little more...
 
@@ -67,9 +78,10 @@ class Tap_Item:
         if self.data:
             tap += "\n  ---\n"
 
-            stream = yaml.dump(self.data,
-                               Dumper=yamlordereddictloader.Dumper,
-                               default_flow_style=False, indent=4)
+            stream = ""
+            for k in self.data:
+                stream += dumper(k,self.data[k],indent=4)
+
             stream = "  "+stream.replace('\n', '\n  ')
             tap += stream
 
@@ -271,7 +283,7 @@ class Tap_Item:
                 if lines[i].strip() == '...':
                     yaml_tail = i
                     break
-
+                  
         # sanity check
         if bool(yaml_head) != bool(yaml_tail):
             logging.warn("")
