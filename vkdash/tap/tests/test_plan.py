@@ -66,11 +66,11 @@ ok 1 - the Plan tests should be empty.\
         newplan.parse(orig_str)
         plan.ok(newplan.test_count==7, "Verifying post plan counted properly.")
 
-    
-
-    results = os.path.splitext(__file__)[0]+".tap"
-    fout = open(results,'w')
-    fout.write(str(plan))
+    #results = os.path.splitext(__file__)[0]+".tap"
+    #fout = open(results,'w')
+    #fout.write(str(plan))
+    # FIXME:
+    plan.write()
 
 if __name__ == '__main__':
     test_plan()

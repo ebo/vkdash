@@ -95,9 +95,11 @@ def test_items():
     
     #plan.ok(True==True, "test basic directives", message="why am I doing this...", data=pdict)
     
-    results = os.path.splitext(__file__)[0]+".tap"
-    fout = open(results,'w')
-    fout.write(str(plan))
+    #results = os.path.splitext(__file__)[0]+".tap"
+    #fout = open(results,'w')
+    #fout.write(str(plan))
+    # FIXME:
+    plan.write()
 
 if __name__ == '__main__':
     test_items()

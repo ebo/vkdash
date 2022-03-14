@@ -18,9 +18,11 @@ def test_atexit():
 
     plan.ok(exists, "test saving the test plan without explicitly writing it","failed by not creating the tap file with running _atexit_save()")
 
-    results = os.path.splitext(__file__)[0]+".tap"
-    fout = open(results,'w')
-    fout.write(str(plan))
+    #results = os.path.splitext(__file__)[0]+".tap"
+    #fout = open(results,'w')
+    #fout.write(str(plan))
+    # FIXME:
+    plan.write()
 
 if __name__ == '__main__':
     test_atexit()
