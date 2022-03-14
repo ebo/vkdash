@@ -88,6 +88,9 @@ class Plan:
               todo=None, severity=None, data=None):
         """Base function for evaluating a test and creating a reported TAP item."""
 
+        # FIXME: can we trap exceptions and deal with them in some
+        # elegant way?
+        
         ok = Tap_Item()
 
         if data is None:
@@ -196,6 +199,10 @@ class Plan:
 
         for t in self.tests:
             outstr += '\n'+str(t)
+
+        # add a final \n to the end.
+        outstr += '\n'
+        
         return outstr
 
     def _atexit_save(self):
